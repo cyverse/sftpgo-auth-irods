@@ -12,6 +12,7 @@ import (
 
 func main() {
 	// set logger
+	log.SetLevel(log.DebugLevel)
 	types.SetLog()
 
 	// read environmental vars
@@ -29,6 +30,12 @@ func main() {
 
 	var sftpGoUser *types.SFTPGoUser
 	if config.IsPublicKeyAuth() {
+		err = config.ValidateForPublicKeyAuth()
+		if err != nil {
+			exitError(err)
+			return
+		}
+
 		sftpGoUser, err = auth.AuthViaPublicKey(config)
 	} else {
 		sftpGoUser, err = auth.AuthViaPassword(config)
@@ -54,7 +61,7 @@ func exitError(err error) {
 
 func printSuccessResponse(sftpGoUser *types.SFTPGoUser) {
 	redactedJSONString := sftpGoUser.GetRedactedJSONString()
-	log.Printf("Authenticated user '%s': %s\n", sftpGoUser.Username, redactedJSONString)
+	log.Infof("Authenticated user '%s': %s\n", sftpGoUser.Username, redactedJSONString)
 
 	resp, _ := json.Marshal(sftpGoUser)
 	fmt.Printf("%v\n", string(resp))

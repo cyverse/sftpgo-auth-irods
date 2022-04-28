@@ -62,9 +62,19 @@ func (config *Config) Validate() error {
 	return nil
 }
 
-func (config *Config) IsPublicKeyAuth() bool {
-	if len(config.SFTPGoAuthdPublickey) > 0 {
-		return true
+// Validate validates field values and returns error if occurs
+func (config *Config) ValidateForPublicKeyAuth() error {
+	if len(config.IRODSProxyUsername) == 0 {
+		return errors.New("iRODS proxy username is not given")
 	}
-	return false
+	if len(config.IRODSProxyPassword) == 0 {
+		return errors.New("iRODS proxy password is not given")
+	}
+
+	return nil
+}
+
+// IsPublicKeyAuth checks if the auth mode is public key auth
+func (config *Config) IsPublicKeyAuth() bool {
+	return len(config.SFTPGoAuthdPublickey) > 0
 }
