@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"path"
 	"strings"
 	"time"
@@ -173,18 +174,17 @@ func AuthViaPublicKey(config *types.Config) (*types.SFTPGoUser, error) {
 	defer irodsclient_fs.CloseDataObject(irodsConn, fileHandle)
 
 	var authorizedKeysBuffer bytes.Buffer
+	readBuffer := make([]byte, 64*1024)
 	for {
-		data, err := irodsclient_fs.ReadDataObject(irodsConn, fileHandle, 1024*64)
-		if err != nil {
+		readLen, err := irodsclient_fs.ReadDataObject(irodsConn, fileHandle, readBuffer)
+		if err != nil && err != io.EOF {
 			return nil, err
 		}
 
-		if len(data) == 0 {
-			// EOF
+		authorizedKeysBuffer.Write(readBuffer[:readLen])
+		if err == io.EOF {
 			break
 		}
-
-		authorizedKeysBuffer.Write(data)
 	}
 
 	authorizedKeysReader := bytes.NewReader(authorizedKeysBuffer.Bytes())
