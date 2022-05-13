@@ -12,8 +12,8 @@ import (
 
 func main() {
 	// set logger
-	log.SetLevel(log.DebugLevel)
-	types.SetLog()
+	defaultLogPath := types.GetDefaultLogPath()
+	types.SetLog(defaultLogPath)
 
 	// read environmental vars
 	config, err := types.ReadFromEnv()
@@ -21,6 +21,24 @@ func main() {
 		exitError(err)
 		return
 	}
+
+	_, err = os.Stat(config.SFTPGoLogDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err2 := os.MkdirAll(config.SFTPGoLogDir, 0644)
+			if err2 != nil {
+				// failed to create a log dir
+				exitError(err)
+				return
+			}
+		} else {
+			// failed to access a log dir
+			exitError(err)
+			return
+		}
+	}
+
+	types.SetLog(config.SFTPGoLogDir)
 
 	err = config.Validate()
 	if err != nil {

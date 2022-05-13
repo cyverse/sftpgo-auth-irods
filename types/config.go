@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	defaultIRODSPort int = 1247
+	defaultIRODSPort int    = 1247
+	defaultLogDir    string = "/tmp"
 )
 
 // Config is a configuration struct
@@ -25,6 +26,13 @@ type Config struct {
 	SFTPGoAuthdUsername  string `envconfig:"SFTPGO_AUTHD_USERNAME"`
 	SFTPGoAuthdPassword  string `envconfig:"SFTPGO_AUTHD_PASSWORD"`
 	SFTPGoAuthdPublickey string `envconfig:"SFTPGO_AUTHD_PUBLIC_KEY"`
+
+	// for Logging
+	SFTPGoLogDir string `envconfig:"SFTPGO_LOG_DIR"`
+}
+
+func GetDefaultLogPath() string {
+	return defaultLogDir
 }
 
 func ReadFromEnv() (*Config, error) {
@@ -36,6 +44,10 @@ func ReadFromEnv() (*Config, error) {
 
 	if config.IRODSPort == 0 {
 		config.IRODSPort = defaultIRODSPort
+	}
+
+	if len(config.SFTPGoLogDir) == 0 {
+		config.SFTPGoLogDir = defaultLogDir
 	}
 
 	return &config, nil
@@ -58,6 +70,9 @@ func (config *Config) Validate() error {
 	}
 	if len(config.SFTPGoAuthdPublickey) == 0 && len(config.SFTPGoAuthdPassword) == 0 {
 		return errors.New("at least any of password or public key must be given")
+	}
+	if len(config.SFTPGoLogDir) == 0 {
+		return errors.New("log dir is not given")
 	}
 	return nil
 }

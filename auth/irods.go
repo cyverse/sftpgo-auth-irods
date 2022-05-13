@@ -122,13 +122,17 @@ func AuthViaPassword(config *types.Config) (*types.SFTPGoUser, error) {
 
 // AuthViaPublicKey authenticate a user via public key
 func AuthViaPublicKey(config *types.Config) (*types.SFTPGoUser, error) {
+	log.Debugf("authenticating a user '%s'\n", config.SFTPGoAuthdUsername)
+
 	userKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(config.SFTPGoAuthdPublickey))
 	if err != nil {
+		log.Debugf("failed to parse public-key for a user '%s'\n", config.SFTPGoAuthdUsername)
 		return nil, err
 	}
 
 	irodsAccount, err := irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.IRODSProxyPassword, "")
 	if err != nil {
+		log.Debugf("failed to create iRODS account for proxy auth\n")
 		return nil, err
 	}
 
@@ -136,6 +140,7 @@ func AuthViaPublicKey(config *types.Config) (*types.SFTPGoUser, error) {
 	err = irodsConn.Connect()
 	if err != nil {
 		// auth fail
+		log.Debugf("failed to login via iRODS proxy user account\n")
 		return nil, err
 	}
 
@@ -143,31 +148,36 @@ func AuthViaPublicKey(config *types.Config) (*types.SFTPGoUser, error) {
 
 	sshPath := makeSSHPath(config)
 
-	log.Debugf("Checking .ssh dir '%s'\n", sshPath)
+	log.Debugf("checking .ssh dir '%s'\n", sshPath)
 	sshCollection, err := irodsclient_fs.GetCollection(irodsConn, sshPath)
 	if err != nil {
+		log.Debugf(".ssh dir not exist'%s'\n", sshPath)
 		return nil, err
 	}
 
 	if sshCollection.ID <= 0 {
 		// collection not exist
+		log.Debugf(".ssh dir not exist'%s'\n", sshPath)
 		return nil, err
 	}
 
 	sshAuthorizedKeysPath := makeSSHAuthorizedKeysPath(config)
-	log.Debugf("Checking .ssh/authorized_keys file '%s'\n", sshAuthorizedKeysPath)
+	log.Debugf("checking .ssh/authorized_keys file '%s'\n", sshAuthorizedKeysPath)
 	sshAuthorizedKeysDataObject, err := irodsclient_fs.GetDataObjectMasterReplica(irodsConn, sshCollection, authorizedKeyFilename)
 	if err != nil {
+		log.Debugf(".ssh/authorized_keys file not exist '%s'\n", sshAuthorizedKeysPath)
 		return nil, err
 	}
 
 	if sshAuthorizedKeysDataObject.ID <= 0 {
 		// authorized keys not exist
+		log.Debugf(".ssh/authorized_keys file not exist '%s'\n", sshAuthorizedKeysPath)
 		return nil, err
 	}
 
 	fileHandle, _, err := irodsclient_fs.OpenDataObject(irodsConn, sshAuthorizedKeysPath, "", "r")
 	if err != nil {
+		log.Debugf("failed to open .ssh/authorized_keys file '%s'\n", sshAuthorizedKeysPath)
 		return nil, err
 	}
 
@@ -178,6 +188,7 @@ func AuthViaPublicKey(config *types.Config) (*types.SFTPGoUser, error) {
 	for {
 		readLen, err := irodsclient_fs.ReadDataObject(irodsConn, fileHandle, readBuffer)
 		if err != nil && err != io.EOF {
+			log.Debugf("failed to read .ssh/authorized_keys file '%s'\n", sshAuthorizedKeysPath)
 			return nil, err
 		}
 
@@ -205,6 +216,7 @@ func AuthViaPublicKey(config *types.Config) (*types.SFTPGoUser, error) {
 
 		if bytes.Equal(authorizedKey.Marshal(), userKey.Marshal()) {
 			// auth ok
+			log.Debugf("authenticated a user '%s'\n", config.SFTPGoAuthdUsername)
 			return &types.SFTPGoUser{
 				Status:      1,
 				Username:    irodsAccount.ClientUser,
@@ -215,6 +227,8 @@ func AuthViaPublicKey(config *types.Config) (*types.SFTPGoUser, error) {
 			}, nil
 		}
 	}
+
+	log.Debugf("unable to find matching authorized public key for a user '%s'\n")
 
 	return nil, errors.New("unable to find matching authorized public key")
 }
