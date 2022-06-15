@@ -103,7 +103,7 @@ func AuthViaPublicKey(config *types.Config) (bool, []string, error) {
 
 	// auth fail
 	log.Debugf("unable to authenticate a user '%s' using a public key", config.SFTPGoAuthdUsername)
-	return false, options, errors.New("unable to find matching authorized public key for user '%s'")
+	return false, nil, errors.New("unable to find matching authorized public key for user '%s'")
 }
 
 // readAuthorizedKeys returns content of authorized_keys
