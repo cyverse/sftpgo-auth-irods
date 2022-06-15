@@ -27,8 +27,11 @@ func makeLocalUserSharedPath(config *types.Config) string {
 }
 
 func makePermissions(config *types.Config) map[string][]string {
+	userHome := fmt.Sprintf("/%s", config.SFTPGoAuthdUsername)
 	permissions := make(map[string][]string)
-	permissions["/"] = []string{"*"}
+	permissions["/"] = []string{"list"}
+	permissions[userHome] = []string{"*"}
+	permissions["/shared"] = []string{"*"}
 	return permissions
 }
 
