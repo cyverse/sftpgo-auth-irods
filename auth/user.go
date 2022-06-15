@@ -69,7 +69,7 @@ func makeVirtualFolders(config *types.Config) []types.SFTPGoVirtualFolder {
 	vfolderHome := types.SFTPGoVirtualFolder{
 		Name:        fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
 		Description: fmt.Sprintf("%s's home dir", config.SFTPGoAuthdUsername),
-		MappedPath:  makeLocalUserHomePath(config),
+		//MappedPath:  makeLocalUserHomePath(config),
 		VirtualPath: fmt.Sprintf("/%s", config.SFTPGoAuthdUsername),
 		FileSystem:  fsHome,
 	}
@@ -77,7 +77,7 @@ func makeVirtualFolders(config *types.Config) []types.SFTPGoVirtualFolder {
 	vfolderShared := types.SFTPGoVirtualFolder{
 		Name:        fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
 		Description: fmt.Sprintf("%s's shared dir", config.SFTPGoAuthdUsername),
-		MappedPath:  makeLocalUserSharedPath(config),
+		//MappedPath:  makeLocalUserSharedPath(config),
 		VirtualPath: "/shared",
 		FileSystem:  fsShared,
 	}
