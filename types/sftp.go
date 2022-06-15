@@ -62,14 +62,31 @@ func (fs *SFTPGoFileSystem) GetRedacted() *SFTPGoFileSystem {
 	return &newFs
 }
 
+// SFTPGoVirtualFolder is a virtual folder data type for SFTPGo
+type SFTPGoVirtualFolder struct {
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	MappedPath  string            `json:"mapped_path"`
+	VirtualPath string            `json:"virtual_path"`
+	FileSystem  *SFTPGoFileSystem `json:"filesystem"`
+}
+
+// SFTPGoFolder is a folder data type for SFTPGo
+type SFTPGoFolder struct {
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	FileSystem  *SFTPGoFileSystem `json:"filesystem"`
+}
+
 // SFTPGoUser is a user data type for SFTPGo
 type SFTPGoUser struct {
-	Status      int                 `json:"status,omitempty"`
-	Username    string              `json:"username"`
-	HomeDir     string              `json:"home_dir,omitempty"`
-	Permissions map[string][]string `json:"permissions"`
-	Filters     *SFTPGoUserFilter   `json:"filters"`
-	FileSystem  *SFTPGoFileSystem   `json:"filesystem"`
+	Status         int                   `json:"status,omitempty"`
+	Username       string                `json:"username"`
+	HomeDir        string                `json:"home_dir,omitempty"`
+	VirtualFolders []SFTPGoVirtualFolder `json:"virtual_folders,omitempty"`
+	Permissions    map[string][]string   `json:"permissions"`
+	Filters        *SFTPGoUserFilter     `json:"filters"`
+	FileSystem     *SFTPGoFileSystem     `json:"filesystem"`
 }
 
 // GetRedacted returns a redacted SFTPGoUser

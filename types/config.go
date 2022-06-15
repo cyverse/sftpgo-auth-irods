@@ -77,7 +77,7 @@ func (config *Config) Validate() error {
 	return nil
 }
 
-// Validate validates field values and returns error if occurs
+// ValidateForPublicKeyAuth validates field values and returns error if occurs
 func (config *Config) ValidateForPublicKeyAuth() error {
 	if len(config.IRODSProxyUsername) == 0 {
 		return errors.New("iRODS proxy username is not given")

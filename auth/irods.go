@@ -20,18 +20,17 @@ import (
 )
 
 const (
-	homeDirPrefix         string        = "/srv/sftpgo/data"
 	authorizedKeyFilename string        = "authorized_keys"
 	applicationName       string        = "sftpgo-auth-irods"
 	authRequestTimeout    time.Duration = 30 * time.Second
 )
 
-func makeLocalHomePath(config *types.Config) string {
-	return path.Join(homeDirPrefix, config.SFTPGoAuthdUsername)
-}
-
 func makeIRODSHomePath(config *types.Config) string {
 	return fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
+}
+
+func makeIRODSSharedPath(config *types.Config) string {
+	return fmt.Sprintf("/%s/home/shared", config.IRODSZone)
 }
 
 func makeSSHPath(config *types.Config) string {

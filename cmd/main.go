@@ -61,7 +61,7 @@ func main() {
 
 		if loggedIn {
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUserForPublicKeyAuth(config)
+			sftpGoUser := auth.MakeSFTPGoUser(config, true)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
@@ -74,7 +74,7 @@ func main() {
 
 		if loggedIn {
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUserForPasswordAuth(config)
+			sftpGoUser := auth.MakeSFTPGoUser(config, false)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
