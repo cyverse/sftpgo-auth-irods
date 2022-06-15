@@ -94,7 +94,7 @@ func exitError(err error) {
 
 func printSuccessResponse(sftpGoUser *types.SFTPGoUser) {
 	redactedJSONString := sftpGoUser.GetRedactedJSONString()
-	log.Infof("Authenticated user '%s': %s\n", sftpGoUser.Username, redactedJSONString)
+	log.Infof("Authenticated user '%s': %s", sftpGoUser.Username, redactedJSONString)
 
 	resp, _ := json.Marshal(sftpGoUser)
 	fmt.Printf("%v\n", string(resp))
