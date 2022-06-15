@@ -63,7 +63,7 @@ func main() {
 			log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUser(config, true)
+			sftpGoUser := auth.MakeSFTPGoUser(config)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
@@ -78,7 +78,7 @@ func main() {
 			log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUser(config, false)
+			sftpGoUser := auth.MakeSFTPGoUser(config)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
