@@ -58,7 +58,9 @@ type SFTPGoFileSystem struct {
 // GetRedacted returns a redacted SFTPGoFileSystem
 func (fs *SFTPGoFileSystem) GetRedacted() *SFTPGoFileSystem {
 	newFs := *fs
-	newFs.IRODSConfig = newFs.IRODSConfig.GetRedacted()
+	if newFs.IRODSConfig != nil {
+		newFs.IRODSConfig = newFs.IRODSConfig.GetRedacted()
+	}
 	return &newFs
 }
 
