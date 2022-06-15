@@ -46,7 +46,6 @@ func main() {
 		return
 	}
 
-	var sftpGoUser *types.SFTPGoUser
 	if config.IsPublicKeyAuth() {
 		err = config.ValidateForPublicKeyAuth()
 		if err != nil {
@@ -54,18 +53,34 @@ func main() {
 			return
 		}
 
-		sftpGoUser, err = auth.AuthViaPublicKey(config)
+		loggedIn, _, err := auth.AuthViaPublicKey(config)
+		if err != nil {
+			exitError(err)
+			return
+		}
+
+		if loggedIn {
+			// return the authenticated user
+			sftpGoUser := auth.MakeSFTPGoUserForPublicKeyAuth(config)
+			printSuccessResponse(sftpGoUser)
+			return
+		}
 	} else {
-		sftpGoUser, err = auth.AuthViaPassword(config)
+		loggedIn, err := auth.AuthViaPassword(config)
+		if err != nil {
+			exitError(err)
+			return
+		}
+
+		if loggedIn {
+			// return the authenticated user
+			sftpGoUser := auth.MakeSFTPGoUserForPasswordAuth(config)
+			printSuccessResponse(sftpGoUser)
+			return
+		}
 	}
 
-	if err != nil {
-		exitError(err)
-		return
-	}
-
-	// return the authenticated user
-	printSuccessResponse(sftpGoUser)
+	exitError(fmt.Errorf("unable to auth the user %s", config.SFTPGoAuthdUsername))
 }
 
 func exitError(err error) {
