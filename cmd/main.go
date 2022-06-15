@@ -60,8 +60,10 @@ func main() {
 		}
 
 		if loggedIn {
+			log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUserForPublicKeyAuth(config)
+			sftpGoUser := auth.MakeSFTPGoUser(config)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
@@ -73,8 +75,10 @@ func main() {
 		}
 
 		if loggedIn {
+			log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUserForPasswordAuth(config)
+			sftpGoUser := auth.MakeSFTPGoUser(config)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
@@ -94,7 +98,7 @@ func exitError(err error) {
 
 func printSuccessResponse(sftpGoUser *types.SFTPGoUser) {
 	redactedJSONString := sftpGoUser.GetRedactedJSONString()
-	log.Infof("Authenticated user '%s': %s\n", sftpGoUser.Username, redactedJSONString)
+	log.Infof("Authenticated user '%s': %s", sftpGoUser.Username, redactedJSONString)
 
 	resp, _ := json.Marshal(sftpGoUser)
 	fmt.Printf("%v\n", string(resp))
