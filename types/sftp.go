@@ -94,7 +94,19 @@ type SFTPGoUser struct {
 // GetRedacted returns a redacted SFTPGoUser
 func (user *SFTPGoUser) GetRedacted() *SFTPGoUser {
 	newUser := *user
-	newUser.FileSystem = newUser.FileSystem.GetRedacted()
+
+	if len(newUser.VirtualFolders) > 0 {
+		newVFolders := []SFTPGoVirtualFolder{}
+		for _, vfolder := range newUser.VirtualFolders {
+			vfolder.FileSystem = vfolder.FileSystem.GetRedacted()
+			newVFolders = append(newVFolders, vfolder)
+		}
+		newUser.VirtualFolders = newVFolders
+	}
+
+	if newUser.FileSystem != nil {
+		newUser.FileSystem = newUser.FileSystem.GetRedacted()
+	}
 	return &newUser
 }
 
