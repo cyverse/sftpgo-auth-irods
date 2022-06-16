@@ -26,10 +26,6 @@ func makeIRODSHomePath(config *types.Config) string {
 	return fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
 }
 
-func makeIRODSSharedPath(config *types.Config) string {
-	return fmt.Sprintf("/%s/home/shared", config.IRODSZone)
-}
-
 func makeSSHPath(config *types.Config) string {
 	homePath := makeIRODSHomePath(config)
 	return path.Join(homePath, ".ssh")
@@ -95,12 +91,12 @@ func AuthViaPublicKey(config *types.Config) (bool, []string, error) {
 	if loggedIn {
 		log.Debugf("checking options - %v", options)
 		// expiry
-		if isKeyExpired(options) {
+		if IsKeyExpired(options) {
 			return false, options, fmt.Errorf("public key access for the user '%s' is expired", config.SFTPGoAuthdUsername)
 		}
 
 		// reject by client whilte-list
-		if isClientRejected(config.SFTPGoAuthdIP, options) {
+		if IsClientRejected(config.SFTPGoAuthdIP, options) {
 			return false, options, fmt.Errorf("public key access for the user '%s' is rejected", config.SFTPGoAuthdUsername)
 		}
 

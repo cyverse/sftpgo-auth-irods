@@ -3,11 +3,14 @@ package auth
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"net"
+	"path"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/cyverse/sftpgo-auth-irods/types"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
@@ -39,7 +42,7 @@ func checkAuthorizedKey(authorizedKeys []byte, userKey ssh.PublicKey) (bool, []s
 	return false, nil
 }
 
-func isKeyExpired(options []string) bool {
+func IsKeyExpired(options []string) bool {
 	for _, option := range options {
 		optKV := strings.Split(option, "=")
 		if len(optKV) == 2 {
@@ -92,7 +95,7 @@ func isKeyExpired(options []string) bool {
 	return false
 }
 
-func isClientRejected(clientIP string, options []string) bool {
+func IsClientRejected(clientIP string, options []string) bool {
 	for _, option := range options {
 		optKV := strings.Split(option, "=")
 		if len(optKV) == 2 {
@@ -173,4 +176,23 @@ func wildCardToRegexp(pattern string) string {
 	}
 
 	return regexString
+}
+
+// GetHomeCollectionPath returns home collection path
+func GetHomeCollectionPath(config *types.Config, options []string) string {
+	userHome := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
+
+	for _, option := range options {
+		optKV := strings.Split(option, "=")
+		if len(optKV) == 2 {
+			optK := strings.TrimSpace(optKV[0])
+			if strings.ToLower(optK) == "home" {
+				optV := strings.TrimSpace(optKV[1])
+				optV = strings.Trim(optV, "\"")
+
+				return path.Join(userHome, optV)
+			}
+		}
+	}
+	return userHome
 }

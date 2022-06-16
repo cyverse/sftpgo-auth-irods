@@ -18,20 +18,19 @@ func makeLocalUserPath(config *types.Config) string {
 	return path.Join(homeDirPrefix, config.SFTPGoAuthdUsername)
 }
 
-func makeLocalUserHomePath(config *types.Config) string {
-	return path.Join(homeDirPrefix, config.SFTPGoAuthdUsername, config.SFTPGoAuthdUsername)
+func makeLocalUserSubPath(config *types.Config, name string) string {
+	return path.Join(homeDirPrefix, config.SFTPGoAuthdUsername, name)
 }
 
-func makeLocalUserSharedPath(config *types.Config) string {
-	return path.Join(homeDirPrefix, config.SFTPGoAuthdUsername, "shared")
-}
-
-func makePermissions(config *types.Config) map[string][]string {
-	userHome := fmt.Sprintf("/%s", config.SFTPGoAuthdUsername)
+func makePermissions(config *types.Config, mountPaths []types.MountPath) map[string][]string {
 	permissions := make(map[string][]string)
 	permissions["/"] = []string{"list"}
-	permissions[userHome] = []string{"*"}
-	permissions["/shared"] = []string{"*"}
+
+	for _, mountPath := range mountPaths {
+		p := fmt.Sprintf("/%s", mountPath.DirName)
+		permissions[p] = []string{"*"}
+	}
+
 	return permissions
 }
 
@@ -62,42 +61,32 @@ func makeFileSystem(config *types.Config, collectionPath string) *types.SFTPGoFi
 	}
 }
 
-func makeVirtualFolders(config *types.Config) []types.SFTPGoVirtualFolder {
-	sharedPath := makeIRODSSharedPath(config)
-	homePath := makeIRODSHomePath(config)
+func makeVirtualFolders(config *types.Config, mountPaths []types.MountPath) []types.SFTPGoVirtualFolder {
+	vfolders := []types.SFTPGoVirtualFolder{}
+	for _, mountPath := range mountPaths {
+		fs := makeFileSystem(config, mountPath.CollectionPath)
+		vfolder := types.SFTPGoVirtualFolder{
+			Name:        mountPath.Name,
+			Description: mountPath.Description,
+			MappedPath:  makeLocalUserSubPath(config, mountPath.Name),
+			VirtualPath: fmt.Sprintf("/%s", mountPath.DirName),
+			FileSystem:  fs,
+		}
 
-	fsShared := makeFileSystem(config, sharedPath)
-	fsHome := makeFileSystem(config, homePath)
-
-	vfolderHome := types.SFTPGoVirtualFolder{
-		Name:        fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
-		Description: fmt.Sprintf("%s's home dir", config.SFTPGoAuthdUsername),
-		MappedPath:  makeLocalUserHomePath(config),
-		VirtualPath: fmt.Sprintf("/%s", config.SFTPGoAuthdUsername),
-		FileSystem:  fsHome,
+		vfolders = append(vfolders, vfolder)
 	}
 
-	vfolderShared := types.SFTPGoVirtualFolder{
-		Name:        fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
-		Description: fmt.Sprintf("%s's shared dir", config.SFTPGoAuthdUsername),
-		MappedPath:  makeLocalUserSharedPath(config),
-		VirtualPath: "/shared",
-		FileSystem:  fsShared,
-	}
-
-	return []types.SFTPGoVirtualFolder{
-		vfolderHome, vfolderShared,
-	}
+	return vfolders
 }
 
-func MakeSFTPGoUser(config *types.Config) *types.SFTPGoUser {
+func MakeSFTPGoUser(config *types.Config, mountPaths []types.MountPath) *types.SFTPGoUser {
 	localFs := makeLocalFileSystem()
 	return &types.SFTPGoUser{
 		Status:         1,
 		Username:       config.SFTPGoAuthdUsername,
 		HomeDir:        makeLocalUserPath(config),
-		VirtualFolders: makeVirtualFolders(config),
-		Permissions:    makePermissions(config),
+		VirtualFolders: makeVirtualFolders(config, mountPaths),
+		Permissions:    makePermissions(config, mountPaths),
 		Filters:        makeFilters(config),
 		FileSystem:     localFs,
 	}

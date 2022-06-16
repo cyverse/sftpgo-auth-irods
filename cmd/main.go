@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/cyverse/sftpgo-auth-irods/auth"
 	"github.com/cyverse/sftpgo-auth-irods/types"
@@ -53,7 +54,7 @@ func main() {
 			return
 		}
 
-		loggedIn, _, err := auth.AuthViaPublicKey(config)
+		loggedIn, options, err := auth.AuthViaPublicKey(config)
 		if err != nil {
 			exitError(err)
 			return
@@ -63,7 +64,37 @@ func main() {
 			log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUser(config)
+			mountPaths := []types.MountPath{}
+
+			userHomePath := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
+			customUserHomePath := auth.GetHomeCollectionPath(config, options)
+			if userHomePath != customUserHomePath {
+				// set a new home path
+				pubKeyName := makeSafePublickKeyName(config.SFTPGoAuthdPublickey)
+
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_home_%s", config.SFTPGoAuthdUsername, pubKeyName),
+					DirName:        config.SFTPGoAuthdUsername,
+					Description:    fmt.Sprintf("iRODS home - %s", customUserHomePath),
+					CollectionPath: customUserHomePath,
+				})
+			} else {
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
+					DirName:        config.SFTPGoAuthdUsername,
+					Description:    "iRODS home",
+					CollectionPath: userHomePath,
+				})
+			}
+
+			mountPaths = append(mountPaths, types.MountPath{
+				Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
+				DirName:        "shared",
+				Description:    "iRODS shared",
+				CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
+			})
+
+			sftpGoUser := auth.MakeSFTPGoUser(config, mountPaths)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
@@ -78,7 +109,20 @@ func main() {
 			log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 			// return the authenticated user
-			sftpGoUser := auth.MakeSFTPGoUser(config)
+			mountPaths := []types.MountPath{
+				{
+					Name:           config.SFTPGoAuthdUsername,
+					Description:    "iRODS home",
+					CollectionPath: fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername),
+				},
+				{
+					Name:           "shared",
+					Description:    "iRODS shared",
+					CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
+				},
+			}
+
+			sftpGoUser := auth.MakeSFTPGoUser(config, mountPaths)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
@@ -103,4 +147,14 @@ func printSuccessResponse(sftpGoUser *types.SFTPGoUser) {
 	resp, _ := json.Marshal(sftpGoUser)
 	fmt.Printf("%v\n", string(resp))
 	os.Exit(0)
+}
+
+func makeSafePublickKeyName(pubkey string) string {
+	fields := strings.Fields(pubkey)
+	key := pubkey
+	if len(fields) >= 2 {
+		key = fields[1]
+	}
+
+	return strings.ReplaceAll(key[:15], " ", "_")
 }
