@@ -3,7 +3,6 @@ package auth
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -103,7 +102,7 @@ func AuthViaPublicKey(config *types.Config) (bool, []string, error) {
 
 	// auth fail
 	log.Debugf("unable to authenticate a user '%s' using a public key", config.SFTPGoAuthdUsername)
-	return false, nil, errors.New("unable to find matching authorized public key for user '%s'")
+	return false, nil, fmt.Errorf("unable to find matching authorized public key for user '%s'", config.SFTPGoAuthdUsername)
 }
 
 // readAuthorizedKeys returns content of authorized_keys
@@ -183,10 +182,72 @@ func checkAuthorizedKey(authorizedKeys []byte, userKey ssh.PublicKey) (bool, []s
 		}
 
 		if bytes.Equal(authorizedKey.Marshal(), userKey.Marshal()) {
-			// auth ok
-			return true, options
+			// found
+			expired := isKeyExpired(options)
+			log.Debugf("found matching key - expired:%t", expired)
+			if !expired {
+				// auth ok
+				return true, options
+			}
 		}
 	}
 
 	return false, nil
+}
+
+func isKeyExpired(options []string) bool {
+	log.Debugf("checking options - %v", options)
+
+	for _, option := range options {
+		optKV := strings.Split(option, "=")
+		if len(optKV) == 2 {
+			optK := strings.TrimSpace(optKV[0])
+			if strings.ToLower(optK) == "expiry-time" {
+				optV := strings.TrimSpace(optKV[1])
+
+				var expiryDate time.Time
+				if len(optV) == 8 {
+					// "YYYYMMDD" format
+					d, err := time.ParseInLocation("20060102", optV, time.Local)
+					if err != nil {
+						log.Debugf("failed to parse expiry date '%s'", optV)
+						// ignore
+						continue
+					}
+					expiryDate = d
+				} else if len(optV) == 12 {
+					// "YYYYMMDDHHMM" format
+					d, err := time.ParseInLocation("200601021504", optV, time.Local)
+					if err != nil {
+						log.Debugf("failed to parse expiry date '%s'", optV)
+						// ignore
+						continue
+					}
+					expiryDate = d
+				} else if len(optV) == 14 {
+					// "YYYYMMDDHHMMSS" format
+					d, err := time.ParseInLocation("20060102150405", optV, time.Local)
+					if err != nil {
+						log.Debugf("failed to parse expiry date '%s'", optV)
+						// ignore
+						continue
+					}
+					expiryDate = d
+				} else {
+					d, err := time.ParseInLocation("2006-01-02 15:04:05", optV, time.Local)
+					if err != nil {
+						log.Debugf("failed to parse expiry date '%s'", optV)
+						// ignore
+						continue
+					}
+					expiryDate = d
+				}
+
+				nowTime := time.Now()
+				log.Debugf("nowTime: %v, expiryDate: %v", nowTime, expiryDate)
+				return nowTime.After(expiryDate)
+			}
+		}
+	}
+	return false
 }
