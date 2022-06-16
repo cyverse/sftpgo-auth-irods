@@ -190,6 +190,10 @@ func GetHomeCollectionPath(config *types.Config, options []string) string {
 				optV := strings.TrimSpace(optKV[1])
 				optV = strings.Trim(optV, "\"")
 
+				if optV[0] == '/' {
+					// absolute
+					return optV
+				}
 				return path.Join(userHome, optV)
 			}
 		}
