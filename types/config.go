@@ -26,6 +26,7 @@ type Config struct {
 	SFTPGoAuthdUsername  string `envconfig:"SFTPGO_AUTHD_USERNAME"`
 	SFTPGoAuthdPassword  string `envconfig:"SFTPGO_AUTHD_PASSWORD"`
 	SFTPGoAuthdPublickey string `envconfig:"SFTPGO_AUTHD_PUBLIC_KEY"`
+	SFTPGoAuthdIP        string `envconfig:"SFTPGO_AUTHD_IP"`
 
 	// for Logging
 	SFTPGoLogDir string `envconfig:"SFTPGO_LOG_DIR"`
@@ -70,6 +71,9 @@ func (config *Config) Validate() error {
 	}
 	if len(config.SFTPGoAuthdPublickey) == 0 && len(config.SFTPGoAuthdPassword) == 0 {
 		return errors.New("at least any of password or public key must be given")
+	}
+	if len(config.SFTPGoAuthdIP) == 0 {
+		return errors.New("ip address is not given")
 	}
 	if len(config.SFTPGoLogDir) == 0 {
 		return errors.New("log dir is not given")

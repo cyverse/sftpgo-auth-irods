@@ -1,12 +1,10 @@
 package auth
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/cyverse/sftpgo-auth-irods/types"
@@ -95,14 +93,25 @@ func AuthViaPublicKey(config *types.Config) (bool, []string, error) {
 
 	loggedIn, options := checkAuthorizedKey(authorizedKeys, userKey)
 	if loggedIn {
+		log.Debugf("checking options - %v", options)
+		// expiry
+		if isKeyExpired(options) {
+			return false, options, fmt.Errorf("public key access for the user '%s' is expired", config.SFTPGoAuthdUsername)
+		}
+
+		// reject by client whilte-list
+		if isClientRejected(config.SFTPGoAuthdIP, options) {
+			return false, options, fmt.Errorf("public key access for the user '%s' is rejected", config.SFTPGoAuthdUsername)
+		}
+
 		// auth success
 		log.Debugf("authenticated a user '%s'", config.SFTPGoAuthdUsername)
 		return true, options, nil
 	}
 
 	// auth fail
-	log.Debugf("unable to authenticate a user '%s' using a public key", config.SFTPGoAuthdUsername)
-	return false, nil, fmt.Errorf("unable to find matching authorized public key for user '%s'", config.SFTPGoAuthdUsername)
+	log.Debugf("unable to authenticate the user '%s' using a public key", config.SFTPGoAuthdUsername)
+	return false, nil, fmt.Errorf("unable to find matching authorized public key for the user '%s'", config.SFTPGoAuthdUsername)
 }
 
 // readAuthorizedKeys returns content of authorized_keys
@@ -162,92 +171,4 @@ func readAuthorizedKeys(config *types.Config, irodsConn *irodsclient_conn.IRODSC
 	}
 
 	return authorizedKeysBuffer.Bytes(), nil
-}
-
-func checkAuthorizedKey(authorizedKeys []byte, userKey ssh.PublicKey) (bool, []string) {
-	authorizedKeysReader := bytes.NewReader(authorizedKeys)
-	authorizedKeysScanner := bufio.NewScanner(authorizedKeysReader)
-
-	for authorizedKeysScanner.Scan() {
-		authorizedKeyLine := strings.TrimSpace(authorizedKeysScanner.Text())
-		if authorizedKeyLine == "" || authorizedKeyLine[0] == '#' {
-			// skip
-			continue
-		}
-
-		authorizedKey, _, options, _, err := ssh.ParseAuthorizedKey([]byte(authorizedKeyLine))
-		if err != nil {
-			// skip invalid public key
-			continue
-		}
-
-		if bytes.Equal(authorizedKey.Marshal(), userKey.Marshal()) {
-			// found
-			expired := isKeyExpired(options)
-			log.Debugf("found matching key - expired:%t", expired)
-			if !expired {
-				// auth ok
-				return true, options
-			}
-		}
-	}
-
-	return false, nil
-}
-
-func isKeyExpired(options []string) bool {
-	log.Debugf("checking options - %v", options)
-
-	for _, option := range options {
-		optKV := strings.Split(option, "=")
-		if len(optKV) == 2 {
-			optK := strings.TrimSpace(optKV[0])
-			if strings.ToLower(optK) == "expiry-time" {
-				optV := strings.TrimSpace(optKV[1])
-
-				var expiryDate time.Time
-				if len(optV) == 8 {
-					// "YYYYMMDD" format
-					d, err := time.ParseInLocation("20060102", optV, time.Local)
-					if err != nil {
-						log.Debugf("failed to parse expiry date '%s'", optV)
-						// ignore
-						continue
-					}
-					expiryDate = d
-				} else if len(optV) == 12 {
-					// "YYYYMMDDHHMM" format
-					d, err := time.ParseInLocation("200601021504", optV, time.Local)
-					if err != nil {
-						log.Debugf("failed to parse expiry date '%s'", optV)
-						// ignore
-						continue
-					}
-					expiryDate = d
-				} else if len(optV) == 14 {
-					// "YYYYMMDDHHMMSS" format
-					d, err := time.ParseInLocation("20060102150405", optV, time.Local)
-					if err != nil {
-						log.Debugf("failed to parse expiry date '%s'", optV)
-						// ignore
-						continue
-					}
-					expiryDate = d
-				} else {
-					d, err := time.ParseInLocation("2006-01-02 15:04:05", optV, time.Local)
-					if err != nil {
-						log.Debugf("failed to parse expiry date '%s'", optV)
-						// ignore
-						continue
-					}
-					expiryDate = d
-				}
-
-				nowTime := time.Now()
-				log.Debugf("nowTime: %v, expiryDate: %v", nowTime, expiryDate)
-				return nowTime.After(expiryDate)
-			}
-		}
-	}
-	return false
 }
