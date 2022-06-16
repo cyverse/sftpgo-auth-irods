@@ -14,12 +14,12 @@ const (
 	homeDirPrefix string = "/srv/sftpgo/data"
 )
 
-func makeLocalUserPath(config *types.Config) string {
-	return path.Join(homeDirPrefix, config.SFTPGoAuthdUsername)
+func makeLocalUserPath(sftpgoUsername string) string {
+	return path.Join(homeDirPrefix, sftpgoUsername)
 }
 
-func makeLocalUserSubPath(config *types.Config, name string) string {
-	return path.Join(homeDirPrefix, config.SFTPGoAuthdUsername, name)
+func makeLocalUserSubPath(sftpgoUsername string, name string) string {
+	return path.Join(homeDirPrefix, sftpgoUsername, name)
 }
 
 func makePermissions(config *types.Config, mountPaths []types.MountPath) map[string][]string {
@@ -61,16 +61,15 @@ func makeFileSystem(config *types.Config, collectionPath string) *types.SFTPGoFi
 	}
 }
 
-func makeVirtualFolders(config *types.Config, mountPaths []types.MountPath) []types.SFTPGoVirtualFolder {
+func makeVirtualFolders(config *types.Config, sftpgoUsername string, mountPaths []types.MountPath) []types.SFTPGoVirtualFolder {
 	vfolders := []types.SFTPGoVirtualFolder{}
 	for _, mountPath := range mountPaths {
-		fs := makeFileSystem(config, mountPath.CollectionPath)
 		vfolder := types.SFTPGoVirtualFolder{
 			Name:        mountPath.Name,
 			Description: mountPath.Description,
-			MappedPath:  makeLocalUserSubPath(config, mountPath.Name),
+			MappedPath:  makeLocalUserSubPath(sftpgoUsername, mountPath.DirName),
 			VirtualPath: fmt.Sprintf("/%s", mountPath.DirName),
-			FileSystem:  fs,
+			FileSystem:  makeFileSystem(config, mountPath.CollectionPath),
 		}
 
 		vfolders = append(vfolders, vfolder)
@@ -79,15 +78,14 @@ func makeVirtualFolders(config *types.Config, mountPaths []types.MountPath) []ty
 	return vfolders
 }
 
-func MakeSFTPGoUser(config *types.Config, mountPaths []types.MountPath) *types.SFTPGoUser {
-	localFs := makeLocalFileSystem()
+func MakeSFTPGoUser(config *types.Config, sftpgoUsername string, mountPaths []types.MountPath) *types.SFTPGoUser {
 	return &types.SFTPGoUser{
 		Status:         1,
-		Username:       config.SFTPGoAuthdUsername,
-		HomeDir:        makeLocalUserPath(config),
-		VirtualFolders: makeVirtualFolders(config, mountPaths),
+		Username:       sftpgoUsername,
+		HomeDir:        makeLocalUserPath(sftpgoUsername),
+		VirtualFolders: makeVirtualFolders(config, sftpgoUsername, mountPaths),
 		Permissions:    makePermissions(config, mountPaths),
 		Filters:        makeFilters(config),
-		FileSystem:     localFs,
+		FileSystem:     makeLocalFileSystem(),
 	}
 }

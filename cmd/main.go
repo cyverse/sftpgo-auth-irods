@@ -68,15 +68,26 @@ func main() {
 
 			userHomePath := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
 			customUserHomePath := auth.GetHomeCollectionPath(config, options)
+			sftpgoUsername := config.SFTPGoAuthdUsername
+
 			if userHomePath != customUserHomePath {
 				// set a new home path
 				pubKeyName := makeSafePublickKeyName(config.SFTPGoAuthdPublickey)
+				// assign a new user
+				sftpgoUsername = fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, pubKeyName)
 
 				mountPaths = append(mountPaths, types.MountPath{
 					Name:           fmt.Sprintf("%s_home_%s", config.SFTPGoAuthdUsername, pubKeyName),
 					DirName:        config.SFTPGoAuthdUsername,
 					Description:    fmt.Sprintf("iRODS home - %s", customUserHomePath),
 					CollectionPath: customUserHomePath,
+				})
+
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_shared_%s", config.SFTPGoAuthdUsername, pubKeyName),
+					DirName:        "shared",
+					Description:    "iRODS shared",
+					CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
 				})
 			} else {
 				mountPaths = append(mountPaths, types.MountPath{
@@ -85,16 +96,16 @@ func main() {
 					Description:    "iRODS home",
 					CollectionPath: userHomePath,
 				})
+
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
+					DirName:        "shared",
+					Description:    "iRODS shared",
+					CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
+				})
 			}
 
-			mountPaths = append(mountPaths, types.MountPath{
-				Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
-				DirName:        "shared",
-				Description:    "iRODS shared",
-				CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
-			})
-
-			sftpGoUser := auth.MakeSFTPGoUser(config, mountPaths)
+			sftpGoUser := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
@@ -122,7 +133,7 @@ func main() {
 				},
 			}
 
-			sftpGoUser := auth.MakeSFTPGoUser(config, mountPaths)
+			sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
