@@ -47,6 +47,8 @@ func main() {
 		return
 	}
 
+	userHomePath := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
+
 	if config.IsPublicKeyAuth() {
 		err = config.ValidateForPublicKeyAuth()
 		if err != nil {
@@ -66,7 +68,6 @@ func main() {
 			// return the authenticated user
 			mountPaths := []types.MountPath{}
 
-			userHomePath := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
 			customUserHomePath := auth.GetHomeCollectionPath(config, options)
 			sftpgoUsername := config.SFTPGoAuthdUsername
 
@@ -122,12 +123,14 @@ func main() {
 			// return the authenticated user
 			mountPaths := []types.MountPath{
 				{
-					Name:           config.SFTPGoAuthdUsername,
+					Name:           fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
+					DirName:        config.SFTPGoAuthdUsername,
 					Description:    "iRODS home",
-					CollectionPath: fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername),
+					CollectionPath: userHomePath,
 				},
 				{
-					Name:           "shared",
+					Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
+					DirName:        "shared",
 					Description:    "iRODS shared",
 					CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
 				},
