@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -95,5 +96,14 @@ func (config *Config) ValidateForPublicKeyAuth() error {
 
 // IsPublicKeyAuth checks if the auth mode is public key auth
 func (config *Config) IsPublicKeyAuth() bool {
+	if config.IsAnonymousUser() {
+		return false
+	}
+
 	return len(config.SFTPGoAuthdPublickey) > 0
+}
+
+// IsAnonymousUser checks if the user is anonymous
+func (config *Config) IsAnonymousUser() bool {
+	return strings.ToLower(config.SFTPGoAuthdUsername) == "anonymous"
 }

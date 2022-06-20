@@ -111,6 +111,12 @@ func main() {
 			return
 		}
 	} else {
+		if config.IsAnonymousUser() {
+			// overwrite existing account info to ensure correct spell/case and empty password
+			config.SFTPGoAuthdUsername = "anonymous"
+			config.SFTPGoAuthdPassword = "" // empty password
+		}
+
 		loggedIn, err := auth.AuthViaPassword(config)
 		if err != nil {
 			exitError(err)
@@ -120,21 +126,23 @@ func main() {
 		if loggedIn {
 			log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
-			// return the authenticated user
-			mountPaths := []types.MountPath{
-				{
+			mountPaths := []types.MountPath{}
+			if !config.IsAnonymousUser() {
+				// anonymous user doesn't have home dir
+				mountPaths = append(mountPaths, types.MountPath{
 					Name:           fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
 					DirName:        config.SFTPGoAuthdUsername,
 					Description:    "iRODS home",
 					CollectionPath: userHomePath,
-				},
-				{
-					Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
-					DirName:        "shared",
-					Description:    "iRODS shared",
-					CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
-				},
+				})
 			}
+
+			mountPaths = append(mountPaths, types.MountPath{
+				Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
+				DirName:        "shared",
+				Description:    "iRODS shared",
+				CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
+			})
 
 			sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
 			printSuccessResponse(sftpGoUser)
