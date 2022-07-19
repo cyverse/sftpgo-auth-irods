@@ -84,12 +84,15 @@ func main() {
 					CollectionPath: customUserHomePath,
 				})
 
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_shared_%s", config.SFTPGoAuthdUsername, pubKeyName),
-					DirName:        "shared",
-					Description:    "iRODS shared",
-					CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
-				})
+				if config.HasSharedDir() {
+					sharedDirName := config.GetSharedDirName()
+					mountPaths = append(mountPaths, types.MountPath{
+						Name:           fmt.Sprintf("%s_%s_%s", config.SFTPGoAuthdUsername, sharedDirName, pubKeyName),
+						DirName:        sharedDirName,
+						Description:    fmt.Sprintf("iRODS %s", sharedDirName),
+						CollectionPath: config.IRODSShared,
+					})
+				}
 			} else {
 				mountPaths = append(mountPaths, types.MountPath{
 					Name:           fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
@@ -98,12 +101,15 @@ func main() {
 					CollectionPath: userHomePath,
 				})
 
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
-					DirName:        "shared",
-					Description:    "iRODS shared",
-					CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
-				})
+				if config.HasSharedDir() {
+					sharedDirName := config.GetSharedDirName()
+					mountPaths = append(mountPaths, types.MountPath{
+						Name:           fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, sharedDirName),
+						DirName:        sharedDirName,
+						Description:    fmt.Sprintf("iRODS %s", sharedDirName),
+						CollectionPath: config.IRODSShared,
+					})
+				}
 			}
 
 			sftpGoUser := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
@@ -137,12 +143,15 @@ func main() {
 				})
 			}
 
-			mountPaths = append(mountPaths, types.MountPath{
-				Name:           fmt.Sprintf("%s_shared", config.SFTPGoAuthdUsername),
-				DirName:        "shared",
-				Description:    "iRODS shared",
-				CollectionPath: fmt.Sprintf("/%s/home/shared", config.IRODSZone),
-			})
+			if config.HasSharedDir() {
+				sharedDirName := config.GetSharedDirName()
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, sharedDirName),
+					DirName:        sharedDirName,
+					Description:    fmt.Sprintf("iRODS %s", sharedDirName),
+					CollectionPath: config.IRODSShared,
+				})
+			}
 
 			sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
 			printSuccessResponse(sftpGoUser)

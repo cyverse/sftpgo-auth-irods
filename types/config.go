@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
@@ -22,6 +23,9 @@ type Config struct {
 	IRODSHost string `envconfig:"IRODS_HOST"`
 	IRODSPort int    `envconfig:"IRODS_PORT"`
 	IRODSZone string `envconfig:"IRODS_ZONE"`
+
+	// for fs mount
+	IRODSShared string `envconfig:"IRODS_SHARED"`
 
 	// SFTP args
 	SFTPGoAuthdUsername  string `envconfig:"SFTPGO_AUTHD_USERNAME"`
@@ -106,4 +110,14 @@ func (config *Config) IsPublicKeyAuth() bool {
 // IsAnonymousUser checks if the user is anonymous
 func (config *Config) IsAnonymousUser() bool {
 	return strings.ToLower(config.SFTPGoAuthdUsername) == "anonymous"
+}
+
+// HasSharedDir checks if shared dir is provided
+func (config *Config) HasSharedDir() bool {
+	return len(config.IRODSShared) > 0
+}
+
+// GetSharedDirName returns shared dir's name
+func (config *Config) GetSharedDirName() string {
+	return filepath.Base(config.IRODSShared)
 }
