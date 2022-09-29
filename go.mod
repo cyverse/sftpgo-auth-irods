@@ -3,7 +3,7 @@ module github.com/cyverse/sftpgo-auth-irods
 go 1.18
 
 require (
-	github.com/cyverse/go-irodsclient v0.9.7
+	github.com/cyverse/go-irodsclient v0.9.8
 	github.com/gliderlabs/ssh v0.3.3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/sirupsen/logrus v1.8.1
