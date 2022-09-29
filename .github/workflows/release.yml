@@ -1,0 +1,26 @@
+name: Release SFTPGo Authentication Plugin for iRODS
+on:
+  release:
+    types: [created]
+
+jobs:
+  releases-matrix:
+    name: Release Go Binary
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: ["386", amd64, arm, arm64]
+    env:
+      PKG: "github.com/cyverse/sftpgo-auth-irods"
+    steps:
+    - uses: actions/checkout@v3
+    - uses: wangyoucao577/go-release-action@v1.31
+      with:
+        github_token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+        goversion: 1.18
+        goos: ${{ matrix.goos }}
+        goarch: ${{ matrix.goarch }}
+        project_path: "./cmd/"
+        binary_name: "sftpgo-auth-irods"
+        extra_files: LICENSE README.md
