@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
 )
 
@@ -22,7 +23,7 @@ func makeLocalUserSubPath(sftpgoUsername string, name string) string {
 	return path.Join(homeDirPrefix, sftpgoUsername, name)
 }
 
-func makePermissions(config *types.Config, mountPaths []types.MountPath) map[string][]string {
+func makePermissions(config *commons.Config, mountPaths []types.MountPath) map[string][]string {
 	permissions := make(map[string][]string)
 	permissions["/"] = []string{"list"}
 
@@ -34,7 +35,7 @@ func makePermissions(config *types.Config, mountPaths []types.MountPath) map[str
 	return permissions
 }
 
-func makeFilters(config *types.Config) *types.SFTPGoUserFilter {
+func makeFilters(config *commons.Config) *types.SFTPGoUserFilter {
 	return &types.SFTPGoUserFilter{
 		AllowedIP:          []string{},
 		DeniedLoginMethods: []string{},
@@ -47,7 +48,7 @@ func makeLocalFileSystem() *types.SFTPGoFileSystem {
 	}
 }
 
-func makeFileSystem(config *types.Config, collectionPath string) *types.SFTPGoFileSystem {
+func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGoFileSystem {
 	return &types.SFTPGoFileSystem{
 		Provider: iRODSFsProvider,
 		IRODSConfig: &types.SFTPGoIRODSFsConfig{
@@ -61,7 +62,7 @@ func makeFileSystem(config *types.Config, collectionPath string) *types.SFTPGoFi
 	}
 }
 
-func makeVirtualFolders(config *types.Config, sftpgoUsername string, mountPaths []types.MountPath) []types.SFTPGoVirtualFolder {
+func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPaths []types.MountPath) []types.SFTPGoVirtualFolder {
 	vfolders := []types.SFTPGoVirtualFolder{}
 	for _, mountPath := range mountPaths {
 		vfolder := types.SFTPGoVirtualFolder{
@@ -78,7 +79,7 @@ func makeVirtualFolders(config *types.Config, sftpgoUsername string, mountPaths 
 	return vfolders
 }
 
-func MakeSFTPGoUser(config *types.Config, sftpgoUsername string, mountPaths []types.MountPath) *types.SFTPGoUser {
+func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []types.MountPath) *types.SFTPGoUser {
 	return &types.SFTPGoUser{
 		Status:         1,
 		Username:       sftpgoUsername,

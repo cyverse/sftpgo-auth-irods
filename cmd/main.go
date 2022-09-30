@@ -2,22 +2,43 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/cyverse/sftpgo-auth-irods/auth"
+	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
 	// set logger
-	defaultLogPath := types.GetDefaultLogPath()
-	types.SetLog(defaultLogPath)
+	defaultLogPath := commons.GetDefaultLogPath()
+	commons.SetLog(defaultLogPath)
+
+	// Parse parameters
+	var version bool
+
+	flag.BoolVar(&version, "version", false, "Print client version information")
+	flag.BoolVar(&version, "v", false, "Print client version information (shorthand form)")
+
+	flag.Parse()
+
+	if version {
+		info, err := commons.GetVersionJSON()
+		if err != nil {
+			exitError(err)
+			return
+		}
+
+		fmt.Println(info)
+		return
+	}
 
 	// read environmental vars
-	config, err := types.ReadFromEnv()
+	config, err := commons.ReadFromEnv()
 	if err != nil {
 		exitError(err)
 		return
@@ -39,7 +60,7 @@ func main() {
 		}
 	}
 
-	types.SetLog(config.SFTPGoLogDir)
+	commons.SetLog(config.SFTPGoLogDir)
 
 	err = config.Validate()
 	if err != nil {

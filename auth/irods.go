@@ -7,7 +7,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/cyverse/sftpgo-auth-irods/types"
+	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/gliderlabs/ssh"
 
 	irodsclient_conn "github.com/cyverse/go-irodsclient/irods/connection"
@@ -22,22 +22,22 @@ const (
 	authRequestTimeout    time.Duration = 30 * time.Second
 )
 
-func makeIRODSHomePath(config *types.Config) string {
+func makeIRODSHomePath(config *commons.Config) string {
 	return fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
 }
 
-func makeSSHPath(config *types.Config) string {
+func makeSSHPath(config *commons.Config) string {
 	homePath := makeIRODSHomePath(config)
 	return path.Join(homePath, ".ssh")
 }
 
-func makeSSHAuthorizedKeysPath(config *types.Config) string {
+func makeSSHAuthorizedKeysPath(config *commons.Config) string {
 	sshPath := makeSSHPath(config)
 	return path.Join(sshPath, authorizedKeyFilename)
 }
 
 // AuthViaPassword authenticate a user via password
-func AuthViaPassword(config *types.Config) (bool, error) {
+func AuthViaPassword(config *commons.Config) (bool, error) {
 	irodsAccount, err := irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.SFTPGoAuthdPassword, "")
 	if err != nil {
 		return false, err
@@ -55,7 +55,7 @@ func AuthViaPassword(config *types.Config) (bool, error) {
 }
 
 // AuthViaPublicKey authenticate a user via public key
-func AuthViaPublicKey(config *types.Config) (bool, []string, error) {
+func AuthViaPublicKey(config *commons.Config) (bool, []string, error) {
 	log.Debugf("authenticating a user '%s'", config.SFTPGoAuthdUsername)
 
 	userKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(config.SFTPGoAuthdPublickey))
@@ -111,7 +111,7 @@ func AuthViaPublicKey(config *types.Config) (bool, []string, error) {
 }
 
 // readAuthorizedKeys returns content of authorized_keys
-func readAuthorizedKeys(config *types.Config, irodsConn *irodsclient_conn.IRODSConnection) ([]byte, error) {
+func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IRODSConnection) ([]byte, error) {
 	// check .ssh dir
 	sshPath := makeSSHPath(config)
 

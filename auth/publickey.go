@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cyverse/sftpgo-auth-irods/types"
+	"github.com/cyverse/sftpgo-auth-irods/commons"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
@@ -179,7 +179,7 @@ func wildCardToRegexp(pattern string) string {
 }
 
 // GetHomeCollectionPath returns home collection path
-func GetHomeCollectionPath(config *types.Config, options []string) string {
+func GetHomeCollectionPath(config *commons.Config, options []string) string {
 	userHome := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
 
 	for _, option := range options {
