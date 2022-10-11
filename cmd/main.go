@@ -86,6 +86,13 @@ func main() {
 		if loggedIn {
 			log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
+			// create .ssh dir
+			err := auth.CreateSshDir(config)
+			if err != nil {
+				exitError(err)
+				return
+			}
+
 			// return the authenticated user
 			mountPaths := []types.MountPath{}
 
@@ -105,6 +112,13 @@ func main() {
 					CollectionPath: customUserHomePath,
 				})
 
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
+					DirName:        ".ssh",
+					Description:    "iRODS .ssh dir",
+					CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
+				})
+
 				if config.HasSharedDir() {
 					sharedDirName := config.GetSharedDirName()
 					mountPaths = append(mountPaths, types.MountPath{
@@ -120,6 +134,13 @@ func main() {
 					DirName:        config.SFTPGoAuthdUsername,
 					Description:    "iRODS home",
 					CollectionPath: userHomePath,
+				})
+
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
+					DirName:        ".ssh",
+					Description:    "iRODS .ssh dir",
+					CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
 				})
 
 				if config.HasSharedDir() {
@@ -153,6 +174,15 @@ func main() {
 		if loggedIn {
 			log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
+			// create .ssh dir
+			if !config.IsAnonymousUser() {
+				err := auth.CreateSshDir(config)
+				if err != nil {
+					exitError(err)
+					return
+				}
+			}
+
 			mountPaths := []types.MountPath{}
 			if !config.IsAnonymousUser() {
 				// anonymous user doesn't have home dir
@@ -161,6 +191,13 @@ func main() {
 					DirName:        config.SFTPGoAuthdUsername,
 					Description:    "iRODS home",
 					CollectionPath: userHomePath,
+				})
+
+				mountPaths = append(mountPaths, types.MountPath{
+					Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
+					DirName:        ".ssh",
+					Description:    "iRODS .ssh dir",
+					CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
 				})
 			}
 

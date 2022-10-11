@@ -168,3 +168,34 @@ func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IROD
 
 	return authorizedKeysBuffer.Bytes(), nil
 }
+
+func CreateSshDir(config *commons.Config) error {
+	sshPath := makeSSHPath(config)
+
+	log.Debugf("creating .ssh dir '%s'", sshPath)
+
+	// login using proxy (admin) account
+	irodsAccount, err := irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.IRODSProxyPassword, "")
+	if err != nil {
+		log.Debugf("failed to create iRODS account for proxy auth")
+		return err
+	}
+
+	irodsConn := irodsclient_conn.NewIRODSConnection(irodsAccount, authRequestTimeout, applicationName)
+	err = irodsConn.Connect()
+	if err != nil {
+		// auth fail
+		log.Debugf("failed to login via iRODS proxy user account")
+		return err
+	}
+
+	defer irodsConn.Disconnect()
+
+	err = irodsclient_fs.CreateCollection(irodsConn, sshPath, true)
+	if err != nil {
+		log.Debugf("failed to create .ssh dir")
+		return err
+	}
+
+	return nil
+}
