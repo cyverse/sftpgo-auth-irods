@@ -11,16 +11,14 @@ import (
 const (
 	localFsProvider int = 0
 	iRODSFsProvider int = 6
-
-	homeDirPrefix string = "/srv/sftpgo/data"
 )
 
-func makeLocalUserPath(sftpgoUsername string) string {
-	return path.Join(homeDirPrefix, sftpgoUsername)
+func makeLocalUserPath(config *commons.Config, sftpgoUsername string) string {
+	return path.Join(config.SFTPGoHomeDir, sftpgoUsername)
 }
 
-func makeLocalUserSubPath(sftpgoUsername string, name string) string {
-	return path.Join(homeDirPrefix, sftpgoUsername, name)
+func makeLocalUserSubPath(config *commons.Config, sftpgoUsername string, name string) string {
+	return path.Join(config.SFTPGoHomeDir, sftpgoUsername, name)
 }
 
 func makePermissions(config *commons.Config, mountPaths []types.MountPath) map[string][]string {
@@ -68,7 +66,7 @@ func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPath
 		vfolder := types.SFTPGoVirtualFolder{
 			Name:        mountPath.Name,
 			Description: mountPath.Description,
-			MappedPath:  makeLocalUserSubPath(sftpgoUsername, mountPath.DirName),
+			MappedPath:  makeLocalUserSubPath(config, sftpgoUsername, mountPath.DirName),
 			VirtualPath: fmt.Sprintf("/%s", mountPath.DirName),
 			FileSystem:  makeFileSystem(config, mountPath.CollectionPath),
 		}
@@ -83,7 +81,7 @@ func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []
 	return &types.SFTPGoUser{
 		Status:         1,
 		Username:       sftpgoUsername,
-		HomeDir:        makeLocalUserPath(sftpgoUsername),
+		HomeDir:        makeLocalUserPath(config, sftpgoUsername),
 		VirtualFolders: makeVirtualFolders(config, sftpgoUsername, mountPaths),
 		Permissions:    makePermissions(config, mountPaths),
 		Filters:        makeFilters(config),

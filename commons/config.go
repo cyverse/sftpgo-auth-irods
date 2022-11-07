@@ -11,6 +11,7 @@ import (
 const (
 	defaultIRODSPort int    = 1247
 	defaultLogDir    string = "/tmp"
+	defaultHomeDir   string = "/srv/sftpgo/data"
 )
 
 // Config is a configuration struct
@@ -25,7 +26,8 @@ type Config struct {
 	IRODSZone string `envconfig:"IRODS_ZONE"`
 
 	// for fs mount
-	IRODSShared string `envconfig:"IRODS_SHARED"`
+	IRODSShared   string `envconfig:"IRODS_SHARED"`
+	SFTPGoHomeDir string `envconfig:"SFTPGO_HOME_PATH"`
 
 	// SFTP args
 	SFTPGoAuthdUsername  string `envconfig:"SFTPGO_AUTHD_USERNAME"`
@@ -56,6 +58,10 @@ func ReadFromEnv() (*Config, error) {
 		config.SFTPGoLogDir = defaultLogDir
 	}
 
+	if len(config.SFTPGoHomeDir) == 0 {
+		config.SFTPGoHomeDir = defaultHomeDir
+	}
+
 	return &config, nil
 }
 
@@ -82,6 +88,9 @@ func (config *Config) Validate() error {
 	}
 	if len(config.SFTPGoLogDir) == 0 {
 		return errors.New("log dir is not given")
+	}
+	if len(config.SFTPGoHomeDir) == 0 {
+		return errors.New("home dir is not given")
 	}
 	return nil
 }
