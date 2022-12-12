@@ -112,12 +112,13 @@ func main() {
 					CollectionPath: customUserHomePath,
 				})
 
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
-					DirName:        ".ssh",
-					Description:    "iRODS .ssh dir",
-					CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
-				})
+				// We don't give access to .ssh dir to not allow editting the authorized_keys file
+				//	mountPaths = append(mountPaths, types.MountPath{
+				//		Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
+				//		DirName:        ".ssh",
+				//		Description:    "iRODS .ssh dir",
+				//		CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
+				//	})
 
 				if config.HasSharedDir() {
 					sharedDirName := config.GetSharedDirName()
