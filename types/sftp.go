@@ -2,6 +2,8 @@ package types
 
 import (
 	"encoding/json"
+
+	"github.com/sftpgo/sdk"
 )
 
 const (
@@ -51,8 +53,8 @@ func (config *SFTPGoIRODSFsConfig) GetRedacted() *SFTPGoIRODSFsConfig {
 
 // SFTPGoFileSystem is a filesystem data type for SFTPGo
 type SFTPGoFileSystem struct {
-	Provider    int                  `json:"provider"`
-	IRODSConfig *SFTPGoIRODSFsConfig `json:"irodsconfig"`
+	Provider    sdk.FilesystemProvider `json:"provider"`
+	IRODSConfig *SFTPGoIRODSFsConfig   `json:"irodsconfig"`
 }
 
 // GetRedacted returns a redacted SFTPGoFileSystem

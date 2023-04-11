@@ -137,12 +137,12 @@ func main() {
 					CollectionPath: userHomePath,
 				})
 
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
-					DirName:        ".ssh",
-					Description:    "iRODS .ssh dir",
-					CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
-				})
+				//mountPaths = append(mountPaths, types.MountPath{
+				//	Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
+				//	DirName:        ".ssh",
+				//	Description:    "iRODS .ssh dir",
+				//	CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
+				//})
 
 				if config.HasSharedDir() {
 					sharedDirName := config.GetSharedDirName()
@@ -194,12 +194,12 @@ func main() {
 					CollectionPath: userHomePath,
 				})
 
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
-					DirName:        ".ssh",
-					Description:    "iRODS .ssh dir",
-					CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
-				})
+				//mountPaths = append(mountPaths, types.MountPath{
+				//	Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
+				//	DirName:        ".ssh",
+				//	Description:    "iRODS .ssh dir",
+				//	CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
+				//})
 			}
 
 			if config.HasSharedDir() {

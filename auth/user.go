@@ -6,11 +6,7 @@ import (
 
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
-)
-
-const (
-	localFsProvider int = 0
-	iRODSFsProvider int = 6
+	"github.com/sftpgo/sdk"
 )
 
 func makeLocalUserPath(config *commons.Config, sftpgoUsername string) string {
@@ -42,13 +38,13 @@ func makeFilters(config *commons.Config) *types.SFTPGoUserFilter {
 
 func makeLocalFileSystem() *types.SFTPGoFileSystem {
 	return &types.SFTPGoFileSystem{
-		Provider: localFsProvider,
+		Provider: sdk.LocalFilesystemProvider,
 	}
 }
 
 func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGoFileSystem {
 	return &types.SFTPGoFileSystem{
-		Provider: iRODSFsProvider,
+		Provider: sdk.IRODSFilesystemProvider,
 		IRODSConfig: &types.SFTPGoIRODSFsConfig{
 			Endpoint:       fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
 			Username:       config.SFTPGoAuthdUsername,
