@@ -2,6 +2,7 @@ package commons
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -124,6 +125,15 @@ func (config *Config) IsAnonymousUser() bool {
 // HasSharedDir checks if shared dir is provided
 func (config *Config) HasSharedDir() bool {
 	return len(config.IRODSShared) > 0
+}
+
+// GetSharedDirName returns shared dir's name
+func (config *Config) GetHomeDirPath() string {
+	if config.IsAnonymousUser() {
+		return ""
+	}
+
+	return fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
 }
 
 // GetSharedDirName returns shared dir's name

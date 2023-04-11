@@ -20,9 +20,11 @@ func main() {
 
 	// Parse parameters
 	var version bool
+	var fakeoutput bool
 
 	flag.BoolVar(&version, "version", false, "Print client version information")
 	flag.BoolVar(&version, "v", false, "Print client version information (shorthand form)")
+	flag.BoolVar(&fakeoutput, "fake", false, "Generate fake output json")
 
 	flag.Parse()
 
@@ -68,157 +70,248 @@ func main() {
 		return
 	}
 
-	userHomePath := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
-
 	if config.IsPublicKeyAuth() {
-		err = config.ValidateForPublicKeyAuth()
-		if err != nil {
-			exitError(err)
-			return
-		}
-
-		loggedIn, options, err := auth.AuthViaPublicKey(config)
-		if err != nil {
-			exitError(err)
-			return
-		}
-
-		if loggedIn {
-			log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
-
-			// create .ssh dir
-			err := auth.CreateSshDir(config)
+		if fakeoutput {
+			sftpGoUser, err := authPublicKeyFake(config)
 			if err != nil {
 				exitError(err)
 				return
 			}
 
-			// return the authenticated user
-			mountPaths := []types.MountPath{}
-
-			customUserHomePath := auth.GetHomeCollectionPath(config, options)
-			sftpgoUsername := config.SFTPGoAuthdUsername
-
-			if userHomePath != customUserHomePath {
-				// set a new home path
-				pubKeyName := makeSafePublickKeyName(config.SFTPGoAuthdPublickey)
-				// assign a new user
-				sftpgoUsername = fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, pubKeyName)
-
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_home_%s", config.SFTPGoAuthdUsername, pubKeyName),
-					DirName:        config.SFTPGoAuthdUsername,
-					Description:    fmt.Sprintf("iRODS home - %s", customUserHomePath),
-					CollectionPath: customUserHomePath,
-				})
-
-				// We don't give access to .ssh dir to not allow editting the authorized_keys file
-				//	mountPaths = append(mountPaths, types.MountPath{
-				//		Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
-				//		DirName:        ".ssh",
-				//		Description:    "iRODS .ssh dir",
-				//		CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
-				//	})
-
-				if config.HasSharedDir() {
-					sharedDirName := config.GetSharedDirName()
-					mountPaths = append(mountPaths, types.MountPath{
-						Name:           fmt.Sprintf("%s_%s_%s", config.SFTPGoAuthdUsername, sharedDirName, pubKeyName),
-						DirName:        sharedDirName,
-						Description:    fmt.Sprintf("iRODS %s", sharedDirName),
-						CollectionPath: config.IRODSShared,
-					})
-				}
-			} else {
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
-					DirName:        config.SFTPGoAuthdUsername,
-					Description:    "iRODS home",
-					CollectionPath: userHomePath,
-				})
-
-				//mountPaths = append(mountPaths, types.MountPath{
-				//	Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
-				//	DirName:        ".ssh",
-				//	Description:    "iRODS .ssh dir",
-				//	CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
-				//})
-
-				if config.HasSharedDir() {
-					sharedDirName := config.GetSharedDirName()
-					mountPaths = append(mountPaths, types.MountPath{
-						Name:           fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, sharedDirName),
-						DirName:        sharedDirName,
-						Description:    fmt.Sprintf("iRODS %s", sharedDirName),
-						CollectionPath: config.IRODSShared,
-					})
-				}
-			}
-
-			sftpGoUser := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
-	} else {
-		if config.IsAnonymousUser() {
-			// overwrite existing account info to ensure correct spell/case and empty password
-			config.SFTPGoAuthdUsername = "anonymous"
-			config.SFTPGoAuthdPassword = "" // empty password
-		}
 
-		loggedIn, err := auth.AuthViaPassword(config)
+		sftpGoUser, err := authPublicKey(config)
 		if err != nil {
 			exitError(err)
 			return
 		}
 
-		if loggedIn {
-			log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
-
-			// create .ssh dir
-			if !config.IsAnonymousUser() {
-				err := auth.CreateSshDir(config)
-				if err != nil {
-					exitError(err)
-					return
-				}
+		printSuccessResponse(sftpGoUser)
+		return
+	} else {
+		if fakeoutput {
+			sftpGoUser, err := authPasswordFake(config)
+			if err != nil {
+				exitError(err)
+				return
 			}
 
-			mountPaths := []types.MountPath{}
-			if !config.IsAnonymousUser() {
-				// anonymous user doesn't have home dir
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
-					DirName:        config.SFTPGoAuthdUsername,
-					Description:    "iRODS home",
-					CollectionPath: userHomePath,
-				})
-
-				//mountPaths = append(mountPaths, types.MountPath{
-				//	Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
-				//	DirName:        ".ssh",
-				//	Description:    "iRODS .ssh dir",
-				//	CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
-				//})
-			}
-
-			if config.HasSharedDir() {
-				sharedDirName := config.GetSharedDirName()
-				mountPaths = append(mountPaths, types.MountPath{
-					Name:           fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, sharedDirName),
-					DirName:        sharedDirName,
-					Description:    fmt.Sprintf("iRODS %s", sharedDirName),
-					CollectionPath: config.IRODSShared,
-				})
-			}
-
-			sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
 			printSuccessResponse(sftpGoUser)
 			return
 		}
+
+		sftpGoUser, err := authPassword(config)
+		if err != nil {
+			exitError(err)
+			return
+		}
+
+		printSuccessResponse(sftpGoUser)
+		return
+	}
+}
+
+func authPublicKeyFake(config *commons.Config) (*types.SFTPGoUser, error) {
+	err := config.ValidateForPublicKeyAuth()
+	if err != nil {
+		return nil, err
 	}
 
-	exitError(fmt.Errorf("unable to auth the user %s", config.SFTPGoAuthdUsername))
+	log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+
+	// return the authenticated user
+	mountPaths := []types.MountPath{}
+
+	sftpgoUsername := config.SFTPGoAuthdUsername
+
+	mountPaths = append(mountPaths, makeMountPathForHome(config))
+
+	//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
+
+	if config.HasSharedDir() {
+		mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
+	}
+
+	sftpGoUser := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
+	return sftpGoUser, nil
+}
+
+func authPasswordFake(config *commons.Config) (*types.SFTPGoUser, error) {
+	if config.IsAnonymousUser() {
+		// overwrite existing account info to ensure correct spell/case and empty password
+		config.SFTPGoAuthdUsername = "anonymous"
+		config.SFTPGoAuthdPassword = "" // empty password
+	}
+
+	log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+
+	mountPaths := []types.MountPath{}
+	if !config.IsAnonymousUser() {
+		// anonymous user doesn't have home dir
+		// so do this only if user is not anonymous
+		mountPaths = append(mountPaths, makeMountPathForHome(config))
+
+		//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
+	}
+
+	if config.HasSharedDir() {
+		mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
+	}
+
+	sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
+	return sftpGoUser, nil
+}
+
+func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
+	err := config.ValidateForPublicKeyAuth()
+	if err != nil {
+		return nil, err
+	}
+
+	loggedIn, options, err := auth.AuthViaPublicKey(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if loggedIn {
+		log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+
+		// create .ssh dir
+		err := auth.CreateSshDir(config)
+		if err != nil {
+			return nil, err
+		}
+
+		// return the authenticated user
+		mountPaths := []types.MountPath{}
+
+		userHomePath := config.GetHomeDirPath()
+		customUserHomePath := auth.GetHomeCollectionPath(config, options)
+		sftpgoUsername := config.SFTPGoAuthdUsername
+
+		if userHomePath != customUserHomePath {
+			// set a new home path
+			pubKeyName := makeSafePublickKeyName(config.SFTPGoAuthdPublickey)
+			// assign a new user
+			sftpgoUsername = fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, pubKeyName)
+
+			mountPaths = append(mountPaths, makeMountPathForCustomHome(config, customUserHomePath, pubKeyName))
+
+			// We don't give access to .ssh dir to not allow editting the authorized_keys file
+			//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
+
+			if config.HasSharedDir() {
+				mountPaths = append(mountPaths, makeMountPathForCustomSharedDir(config, pubKeyName))
+			}
+		} else {
+			mountPaths = append(mountPaths, makeMountPathForHome(config))
+
+			//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
+
+			if config.HasSharedDir() {
+				mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
+			}
+		}
+
+		sftpGoUser := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
+		return sftpGoUser, nil
+	}
+
+	return nil, fmt.Errorf("unable to auth the user %s", config.SFTPGoAuthdUsername)
+}
+
+func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
+	if config.IsAnonymousUser() {
+		// overwrite existing account info to ensure correct spell/case and empty password
+		config.SFTPGoAuthdUsername = "anonymous"
+		config.SFTPGoAuthdPassword = "" // empty password
+	}
+
+	loggedIn, err := auth.AuthViaPassword(config)
+	if err != nil {
+		return nil, err
+	}
+
+	if loggedIn {
+		log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+
+		// create .ssh dir
+		if !config.IsAnonymousUser() {
+			err := auth.CreateSshDir(config)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		mountPaths := []types.MountPath{}
+		if !config.IsAnonymousUser() {
+			// anonymous user doesn't have home dir
+			// so do this only if user is not anonymous
+			mountPaths = append(mountPaths, makeMountPathForHome(config))
+
+			//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
+		}
+
+		if config.HasSharedDir() {
+			mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
+		}
+
+		sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
+		return sftpGoUser, nil
+	}
+
+	return nil, fmt.Errorf("unable to auth the user %s", config.SFTPGoAuthdUsername)
+}
+
+func makeMountPathForHome(config *commons.Config) types.MountPath {
+	userHomePath := config.GetHomeDirPath()
+	return types.MountPath{
+		Name:           fmt.Sprintf("%s_home", config.SFTPGoAuthdUsername),
+		DirName:        config.SFTPGoAuthdUsername,
+		Description:    "iRODS home",
+		CollectionPath: userHomePath,
+	}
+}
+
+func makeMountPathForCustomHome(config *commons.Config, customUserHomePath string, pubKeyName string) types.MountPath {
+	return types.MountPath{
+		Name:           fmt.Sprintf("%s_home_%s", config.SFTPGoAuthdUsername, pubKeyName),
+		DirName:        config.SFTPGoAuthdUsername,
+		Description:    fmt.Sprintf("iRODS home - %s", customUserHomePath),
+		CollectionPath: customUserHomePath,
+	}
+}
+
+func makeMountPathForSSHDir(config *commons.Config) types.MountPath {
+	userHomePath := config.GetHomeDirPath()
+	return types.MountPath{
+		Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
+		DirName:        ".ssh",
+		Description:    "iRODS .ssh dir",
+		CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
+	}
+}
+
+func makeMountPathForSharedDir(config *commons.Config) types.MountPath {
+	sharedDirName := config.GetSharedDirName()
+	return types.MountPath{
+		Name:           fmt.Sprintf("%s_%s", config.SFTPGoAuthdUsername, sharedDirName),
+		DirName:        sharedDirName,
+		Description:    fmt.Sprintf("iRODS %s", sharedDirName),
+		CollectionPath: config.IRODSShared,
+	}
+}
+
+func makeMountPathForCustomSharedDir(config *commons.Config, pubKeyName string) types.MountPath {
+	sharedDirName := config.GetSharedDirName()
+	return types.MountPath{
+		Name:           fmt.Sprintf("%s_%s_%s", config.SFTPGoAuthdUsername, sharedDirName, pubKeyName),
+		DirName:        sharedDirName,
+		Description:    fmt.Sprintf("iRODS %s", sharedDirName),
+		CollectionPath: config.IRODSShared,
+	}
 }
 
 func exitError(err error) {
