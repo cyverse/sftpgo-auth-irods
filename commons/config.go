@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	defaultIRODSPort int    = 1247
-	defaultLogDir    string = "/tmp"
-	defaultHomeDir   string = "/srv/sftpgo/data"
+	defaultIRODSPort       int    = 1247
+	defaultIRODSAuthScheme string = "native"
+	defaultLogDir          string = "/tmp"
+	defaultHomeDir         string = "/srv/sftpgo/data"
 )
 
 // Config is a configuration struct
@@ -21,10 +22,18 @@ type Config struct {
 	IRODSProxyUsername string `envconfig:"IRODS_PROXY_USER"`
 	IRODSProxyPassword string `envconfig:"IRODS_PROXY_PASSWORD"`
 
-	// for iRODS Auth
-	IRODSHost string `envconfig:"IRODS_HOST"`
-	IRODSPort int    `envconfig:"IRODS_PORT"`
-	IRODSZone string `envconfig:"IRODS_ZONE"`
+	// for iRODS auth
+	IRODSHost       string `envconfig:"IRODS_HOST"`
+	IRODSPort       int    `envconfig:"IRODS_PORT"`
+	IRODSZone       string `envconfig:"IRODS_ZONE"`
+	IRODSAuthScheme string `envconfig:"IRODS_AUTH_SCHEME"`
+
+	// for SSL/PAM auth
+	IRODSSSLCACertificatePath string `envconfig:"IRODS_SSL_CA_CERT_PATH"`
+	IRODSSSLAlgorithm         string `envconfig:"IRODS_SSL_ALGORITHM"`
+	IRODSSSLKeySize           int    `envconfig:"IRODS_SSL_KEY_SIZE"`
+	IRODSSSLSaltSize          int    `envconfig:"IRODS_SSL_SALT_SIZE"`
+	IRODSSSLHashRounds        int    `envconfig:"IRODS_SSL_HASH_ROUNDS"`
 
 	// for fs mount
 	IRODSShared   string `envconfig:"IRODS_SHARED"`
@@ -55,6 +64,10 @@ func ReadFromEnv() (*Config, error) {
 		config.IRODSPort = defaultIRODSPort
 	}
 
+	if len(config.IRODSAuthScheme) == 0 {
+		config.IRODSAuthScheme = defaultIRODSAuthScheme
+	}
+
 	if len(config.SFTPGoLogDir) == 0 {
 		config.SFTPGoLogDir = defaultLogDir
 	}
@@ -76,6 +89,26 @@ func (config *Config) Validate() error {
 	}
 	if len(config.IRODSZone) == 0 {
 		return errors.New("iRODS zone is not given")
+	}
+	if len(config.IRODSAuthScheme) == 0 {
+		return errors.New("iRODS auth scheme is not given")
+	}
+	if config.IRODSAuthScheme == "pam" {
+		if len(config.IRODSSSLCACertificatePath) == 0 {
+			return errors.New("iRODS SSL CA certificate path is not given")
+		}
+		if len(config.IRODSSSLAlgorithm) == 0 {
+			return errors.New("iRODS SSL encryption algorithm is not given")
+		}
+		if config.IRODSSSLKeySize <= 0 {
+			return errors.New("iRODS SSL encryption key size is not given")
+		}
+		if config.IRODSSSLSaltSize <= 0 {
+			return errors.New("iRODS SSL encryption salt size is not given")
+		}
+		if config.IRODSSSLHashRounds <= 0 {
+			return errors.New("iRODS SSL encryption hash rounds is not given")
+		}
 	}
 
 	if len(config.SFTPGoAuthdUsername) == 0 {

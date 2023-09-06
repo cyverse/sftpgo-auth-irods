@@ -46,12 +46,18 @@ func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGo
 	return &types.SFTPGoFileSystem{
 		Provider: sdk.IRODSFilesystemProvider,
 		IRODSConfig: &types.SFTPGoIRODSFsConfig{
-			Endpoint:       fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
-			Username:       config.SFTPGoAuthdUsername,
-			ProxyUsername:  config.IRODSProxyUsername,
-			Password:       types.NewSFTPGoSecretForUserPassword(config.IRODSProxyPassword),
-			CollectionPath: collectionPath,
-			Resource:       "",
+			Endpoint:             fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
+			Username:             config.SFTPGoAuthdUsername,
+			ProxyUsername:        config.IRODSProxyUsername,
+			Password:             types.NewSFTPGoSecretForUserPassword(config.IRODSProxyPassword),
+			CollectionPath:       collectionPath,
+			Resource:             "",
+			AuthScheme:           config.IRODSAuthScheme,
+			SSLCACertificatePath: config.IRODSSSLCACertificatePath,
+			SSLKeySize:           config.IRODSSSLKeySize,
+			SSLAlgorithm:         config.IRODSSSLAlgorithm,
+			SSLSaltSize:          config.IRODSSSLSaltSize,
+			SSLHashRounds:        config.IRODSSSLHashRounds,
 		},
 	}
 }

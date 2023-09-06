@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/cyverse/sftpgo-auth-irods/commons"
@@ -36,9 +37,74 @@ func makeSSHAuthorizedKeysPath(config *commons.Config) string {
 	return path.Join(sshPath, authorizedKeyFilename)
 }
 
+func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, error) {
+	var irodsAccount *irodsclient_types.IRODSAccount
+	var err error
+
+	switch strings.ToLower(config.IRODSAuthScheme) {
+	case "", "native":
+		irodsAccount, err = irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.SFTPGoAuthdPassword, "")
+		if err != nil {
+			log.Debugf("failed to create iRODS account for auth")
+			return nil, err
+		}
+	case "pam":
+		irodsAccount, err := irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemePAM, config.SFTPGoAuthdPassword, "")
+		if err != nil {
+			log.Debugf("failed to create iRODS account for auth")
+			return nil, err
+		}
+
+		sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
+		if err != nil {
+			log.Debugf("failed to create iRODS SSL config for auth")
+			return nil, err
+		}
+
+		irodsAccount.SetSSLConfiguration(sslConf)
+	default:
+		log.Debugf("unknown authentication scheme %s", config.IRODSAuthScheme)
+		return nil, fmt.Errorf("unknown authentication scheme %s", config.IRODSAuthScheme)
+	}
+
+	return irodsAccount, nil
+}
+
+func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSAccount, error) {
+	var irodsAccount *irodsclient_types.IRODSAccount
+	var err error
+
+	switch strings.ToLower(config.IRODSAuthScheme) {
+	case "", "native":
+		irodsAccount, err = irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.SFTPGoAuthdPassword, "")
+		if err != nil {
+			log.Debugf("failed to create iRODS account for proxy auth")
+			return nil, err
+		}
+	case "pam":
+		irodsAccount, err = irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemePAM, config.IRODSProxyPassword, "")
+		if err != nil {
+			log.Debugf("failed to create iRODS account for proxy auth")
+			return nil, err
+		}
+
+		sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
+		if err != nil {
+			log.Debugf("failed to create iRODS SSL config for auth")
+			return nil, err
+		}
+
+		irodsAccount.SetSSLConfiguration(sslConf)
+	default:
+		return nil, fmt.Errorf("unknown authentication scheme %s", config.IRODSAuthScheme)
+	}
+
+	return irodsAccount, nil
+}
+
 // AuthViaPassword authenticate a user via password
 func AuthViaPassword(config *commons.Config) (bool, error) {
-	irodsAccount, err := irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.SFTPGoAuthdPassword, "")
+	irodsAccount, err := makeIRODSAccount(config)
 	if err != nil {
 		return false, err
 	}
@@ -65,9 +131,8 @@ func AuthViaPublicKey(config *commons.Config) (bool, []string, error) {
 	}
 
 	// login using proxy (admin) account
-	irodsAccount, err := irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.IRODSProxyPassword, "")
+	irodsAccount, err := makeIRODSAccountForProxy(config)
 	if err != nil {
-		log.Debugf("failed to create iRODS account for proxy auth")
 		return false, nil, err
 	}
 
@@ -175,9 +240,8 @@ func CreateSshDir(config *commons.Config) error {
 	log.Debugf("creating .ssh dir '%s'", sshPath)
 
 	// login using proxy (admin) account
-	irodsAccount, err := irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.IRODSProxyPassword, "")
+	irodsAccount, err := makeIRODSAccountForProxy(config)
 	if err != nil {
-		log.Debugf("failed to create iRODS account for proxy auth")
 		return err
 	}
 
