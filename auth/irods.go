@@ -49,7 +49,7 @@ func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, 
 			return nil, err
 		}
 	case "pam":
-		irodsAccount, err := irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemePAM, config.SFTPGoAuthdPassword, "")
+		irodsAccount, err = irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemePAM, config.SFTPGoAuthdPassword, "")
 		if err != nil {
 			log.Debugf("failed to create iRODS account for auth")
 			return nil, err

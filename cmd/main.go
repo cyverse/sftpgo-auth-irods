@@ -231,6 +231,7 @@ func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
 
 	loggedIn, err := auth.AuthViaPassword(config)
 	if err != nil {
+		log.WithError(err).Errorf("Authenticated failed for user '%s' using password", config.SFTPGoAuthdUsername)
 		return nil, err
 	}
 
