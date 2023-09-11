@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
@@ -43,22 +44,66 @@ func makeLocalFileSystem() *types.SFTPGoFileSystem {
 }
 
 func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGoFileSystem {
-	return &types.SFTPGoFileSystem{
-		Provider: sdk.IRODSFilesystemProvider,
-		IRODSConfig: &types.SFTPGoIRODSFsConfig{
-			Endpoint:             fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
-			Username:             config.SFTPGoAuthdUsername,
-			ProxyUsername:        config.IRODSProxyUsername,
-			Password:             types.NewSFTPGoSecretForUserPassword(config.IRODSProxyPassword),
-			CollectionPath:       collectionPath,
-			Resource:             "",
-			AuthScheme:           config.IRODSAuthScheme,
-			SSLCACertificatePath: config.IRODSSSLCACertificatePath,
-			SSLKeySize:           config.IRODSSSLKeySize,
-			SSLAlgorithm:         config.IRODSSSLAlgorithm,
-			SSLSaltSize:          config.IRODSSSLSaltSize,
-			SSLHashRounds:        config.IRODSSSLHashRounds,
-		},
+	switch strings.ToLower(config.IRODSAuthScheme) {
+	case "", "native", "pam":
+		return &types.SFTPGoFileSystem{
+			Provider: sdk.IRODSFilesystemProvider,
+			IRODSConfig: &types.SFTPGoIRODSFsConfig{
+				Endpoint:             fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
+				Username:             config.SFTPGoAuthdUsername,
+				ProxyUsername:        config.IRODSProxyUsername,
+				Password:             types.NewSFTPGoSecretForUserPassword(config.IRODSProxyPassword),
+				CollectionPath:       collectionPath,
+				Resource:             "",
+				AuthScheme:           config.IRODSAuthScheme,
+				SSLCACertificatePath: config.IRODSSSLCACertificatePath,
+				SSLKeySize:           config.IRODSSSLKeySize,
+				SSLAlgorithm:         config.IRODSSSLAlgorithm,
+				SSLSaltSize:          config.IRODSSSLSaltSize,
+				SSLHashRounds:        config.IRODSSSLHashRounds,
+			},
+		}
+	case "pam_for_users":
+		if config.IsProxyAuth() {
+			return &types.SFTPGoFileSystem{
+				Provider: sdk.IRODSFilesystemProvider,
+				IRODSConfig: &types.SFTPGoIRODSFsConfig{
+					Endpoint:             fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
+					Username:             config.SFTPGoAuthdUsername,
+					ProxyUsername:        config.IRODSProxyUsername,
+					Password:             types.NewSFTPGoSecretForUserPassword(config.IRODSProxyPassword),
+					CollectionPath:       collectionPath,
+					Resource:             "",
+					AuthScheme:           "native",
+					SSLCACertificatePath: "",
+					SSLKeySize:           0,
+					SSLAlgorithm:         "",
+					SSLSaltSize:          0,
+					SSLHashRounds:        0,
+				},
+			}
+		}
+
+		return &types.SFTPGoFileSystem{
+			Provider: sdk.IRODSFilesystemProvider,
+			IRODSConfig: &types.SFTPGoIRODSFsConfig{
+				Endpoint:             fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
+				Username:             config.SFTPGoAuthdUsername,
+				ProxyUsername:        config.IRODSProxyUsername,
+				Password:             types.NewSFTPGoSecretForUserPassword(config.IRODSProxyPassword),
+				CollectionPath:       collectionPath,
+				Resource:             "",
+				AuthScheme:           "pam",
+				SSLCACertificatePath: config.IRODSSSLCACertificatePath,
+				SSLKeySize:           config.IRODSSSLKeySize,
+				SSLAlgorithm:         config.IRODSSSLAlgorithm,
+				SSLSaltSize:          config.IRODSSSLSaltSize,
+				SSLHashRounds:        config.IRODSSSLHashRounds,
+			},
+		}
+	default:
+		return nil
+
 	}
 }
 

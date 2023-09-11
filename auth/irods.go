@@ -48,7 +48,9 @@ func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, 
 			log.Debugf("failed to create iRODS account for auth")
 			return nil, err
 		}
-	case "pam":
+	case "pam", "pam_for_users":
+		// pam_for_users auth mode uses PAM auth for testing user password
+
 		irodsAccount, err = irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemePAM, config.SFTPGoAuthdPassword, "")
 		if err != nil {
 			log.Debugf("failed to create iRODS account for auth")
@@ -75,7 +77,9 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 	var err error
 
 	switch strings.ToLower(config.IRODSAuthScheme) {
-	case "", "native":
+	case "", "native", "pam_for_users":
+		// pam_for_users auth mode uses native auth to use proxy
+
 		irodsAccount, err = irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.SFTPGoAuthdPassword, "")
 		if err != nil {
 			log.Debugf("failed to create iRODS account for proxy auth")
@@ -239,10 +243,21 @@ func CreateSshDir(config *commons.Config) error {
 
 	log.Debugf("creating .ssh dir '%s'", sshPath)
 
-	// login using proxy (admin) account
-	irodsAccount, err := makeIRODSAccountForProxy(config)
-	if err != nil {
-		return err
+	var irodsAccount *irodsclient_types.IRODSAccount
+	var err error
+
+	if config.IsProxyAuth() {
+		// login using proxy (admin) account
+		irodsAccount, err = makeIRODSAccountForProxy(config)
+		if err != nil {
+			return err
+		}
+	} else {
+		// login
+		irodsAccount, err = makeIRODSAccount(config)
+		if err != nil {
+			return err
+		}
 	}
 
 	irodsConn := irodsclient_conn.NewIRODSConnection(irodsAccount, authRequestTimeout, applicationName)

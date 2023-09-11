@@ -93,7 +93,7 @@ func (config *Config) Validate() error {
 	if len(config.IRODSAuthScheme) == 0 {
 		return errors.New("iRODS auth scheme is not given")
 	}
-	if config.IRODSAuthScheme == "pam" {
+	if config.IRODSAuthScheme == "pam" || config.IRODSAuthScheme == "pam_for_users" {
 		if len(config.IRODSSSLCACertificatePath) == 0 {
 			return errors.New("iRODS SSL CA certificate path is not given")
 		}
@@ -153,6 +153,11 @@ func (config *Config) IsPublicKeyAuth() bool {
 // IsAnonymousUser checks if the user is anonymous
 func (config *Config) IsAnonymousUser() bool {
 	return strings.ToLower(config.SFTPGoAuthdUsername) == "anonymous"
+}
+
+// IsProxyAuth checks if it uses proxy auth
+func (config *Config) IsProxyAuth() bool {
+	return len(config.IRODSProxyUsername) > 0
 }
 
 // HasSharedDir checks if shared dir is provided

@@ -178,11 +178,12 @@ func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 	if loggedIn {
 		log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
+		// must have .ssh dir to reach here!
 		// create .ssh dir
-		err := auth.CreateSshDir(config)
-		if err != nil {
-			return nil, err
-		}
+		//err := auth.CreateSshDir(config)
+		//if err != nil {
+		//	return nil, err
+		//}
 
 		// return the authenticated user
 		mountPaths := []types.MountPath{}
