@@ -80,7 +80,7 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 	case "", "native", "pam_for_users":
 		// pam_for_users auth mode uses native auth to use proxy
 
-		irodsAccount, err = irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.SFTPGoAuthdPassword, "")
+		irodsAccount, err = irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.IRODSProxyPassword, "")
 		if err != nil {
 			log.Debugf("failed to create iRODS account for proxy auth")
 			return nil, err
