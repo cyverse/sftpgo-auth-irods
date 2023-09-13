@@ -23,10 +23,14 @@ type Config struct {
 	IRODSProxyPassword string `envconfig:"IRODS_PROXY_PASSWORD"`
 
 	// for iRODS auth
-	IRODSHost       string `envconfig:"IRODS_HOST"`
-	IRODSPort       int    `envconfig:"IRODS_PORT"`
-	IRODSZone       string `envconfig:"IRODS_ZONE"`
-	IRODSAuthScheme string `envconfig:"IRODS_AUTH_SCHEME"`
+	IRODSHost string `envconfig:"IRODS_HOST"`
+	IRODSPort int    `envconfig:"IRODS_PORT"`
+	IRODSZone string `envconfig:"IRODS_ZONE"`
+	// IRODSAuthScheme should be one of ['native','pam','pam_for_users']
+	IRODSAuthScheme           string `envconfig:"IRODS_AUTH_SCHEME"`
+	IRODSRequireCSNegotiation bool   `envconfig:"IRODS_REQUIRE_CS_NEGOTIATION"`
+	// IRODSCSNegotiationPolicy should be one of ['CS_NEG_REFUSE','CS_NEG_REQUIRE','CS_NEG_DONT_CARE']
+	IRODSCSNegotiationPolicy string `envconfig:"IRODS_CS_NEGOTIATION_POLICY"`
 
 	// for SSL/PAM auth
 	IRODSSSLCACertificatePath string `envconfig:"IRODS_SSL_CA_CERT_PATH"`
@@ -68,6 +72,10 @@ func ReadFromEnv() (*Config, error) {
 		config.IRODSAuthScheme = defaultIRODSAuthScheme
 	}
 
+	if len(config.IRODSCSNegotiationPolicy) == 0 {
+		config.IRODSCSNegotiationPolicy = "CS_NEG_DONT_CARE"
+	}
+
 	if len(config.SFTPGoLogDir) == 0 {
 		config.SFTPGoLogDir = defaultLogDir
 	}
@@ -93,7 +101,38 @@ func (config *Config) Validate() error {
 	if len(config.IRODSAuthScheme) == 0 {
 		return errors.New("iRODS auth scheme is not given")
 	}
-	if config.IRODSAuthScheme == "pam" || config.IRODSAuthScheme == "pam_for_users" {
+	if config.IRODSRequireCSNegotiation {
+		if len(config.IRODSCSNegotiationPolicy) == 0 {
+			return errors.New("iRODS client-server negotiation policy is not given")
+		}
+
+		if strings.ToLower(config.IRODSCSNegotiationPolicy) == "cs_neg_require" {
+			// SSL
+			if len(config.IRODSSSLCACertificatePath) == 0 {
+				return errors.New("iRODS SSL CA certificate path is not given")
+			}
+			if len(config.IRODSSSLAlgorithm) == 0 {
+				return errors.New("iRODS SSL encryption algorithm is not given")
+			}
+			if config.IRODSSSLKeySize <= 0 {
+				return errors.New("iRODS SSL encryption key size is not given")
+			}
+			if config.IRODSSSLSaltSize <= 0 {
+				return errors.New("iRODS SSL encryption salt size is not given")
+			}
+			if config.IRODSSSLHashRounds <= 0 {
+				return errors.New("iRODS SSL encryption hash rounds is not given")
+			}
+		}
+	}
+	if strings.ToLower(config.IRODSAuthScheme) == "pam" || strings.ToLower(config.IRODSAuthScheme) == "pam_for_users" {
+		if !config.IRODSRequireCSNegotiation {
+			return errors.New("iRODS client-server negotiation is not given for PAM authentication")
+		}
+		if len(config.IRODSCSNegotiationPolicy) == 0 {
+			return errors.New("iRODS client-server negotiation policy is not given for PAM authentication")
+		}
+
 		if len(config.IRODSSSLCACertificatePath) == 0 {
 			return errors.New("iRODS SSL CA certificate path is not given")
 		}

@@ -22,4 +22,4 @@ require (
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
 
-replace github.com/sftpgo/sdk => github.com/cyverse/sftpgo-sdk v0.1.3-0.20230906214213-bdb8dbbe543f
+replace github.com/sftpgo/sdk => github.com/cyverse/sftpgo-sdk v0.1.3-0.20230913180245-efcf4a8e8628

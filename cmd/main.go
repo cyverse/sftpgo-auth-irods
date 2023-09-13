@@ -71,18 +71,15 @@ func main() {
 	}
 
 	if config.IsPublicKeyAuth() {
-		if fakeoutput {
-			sftpGoUser, err := authPublicKeyFake(config)
-			if err != nil {
-				exitError(err)
-				return
-			}
+		var sftpGoUser *types.SFTPGoUser
+		var err error
 
-			printSuccessResponse(sftpGoUser)
-			return
+		if fakeoutput {
+			sftpGoUser, err = authPublicKeyFake(config)
+		} else {
+			sftpGoUser, err = authPublicKey(config)
 		}
 
-		sftpGoUser, err := authPublicKey(config)
 		if err != nil {
 			exitError(err)
 			return
@@ -91,18 +88,15 @@ func main() {
 		printSuccessResponse(sftpGoUser)
 		return
 	} else {
-		if fakeoutput {
-			sftpGoUser, err := authPasswordFake(config)
-			if err != nil {
-				exitError(err)
-				return
-			}
+		var sftpGoUser *types.SFTPGoUser
+		var err error
 
-			printSuccessResponse(sftpGoUser)
-			return
+		if fakeoutput {
+			sftpGoUser, err = authPasswordFake(config)
+		} else {
+			sftpGoUser, err = authPassword(config)
 		}
 
-		sftpGoUser, err := authPassword(config)
 		if err != nil {
 			exitError(err)
 			return

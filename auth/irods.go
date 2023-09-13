@@ -50,23 +50,35 @@ func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, 
 		}
 	case "pam", "pam_for_users":
 		// pam_for_users auth mode uses PAM auth for testing user password
-
 		irodsAccount, err = irodsclient_types.CreateIRODSAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, irodsclient_types.AuthSchemePAM, config.SFTPGoAuthdPassword, "")
 		if err != nil {
 			log.Debugf("failed to create iRODS account for auth")
 			return nil, err
 		}
-
-		sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
-		if err != nil {
-			log.Debugf("failed to create iRODS SSL config for auth")
-			return nil, err
-		}
-
-		irodsAccount.SetSSLConfiguration(sslConf)
 	default:
 		log.Debugf("unknown authentication scheme %s", config.IRODSAuthScheme)
 		return nil, fmt.Errorf("unknown authentication scheme %s", config.IRODSAuthScheme)
+	}
+
+	// SSL
+	if config.IRODSRequireCSNegotiation {
+		require, err := irodsclient_types.GetCSNegotiationRequire(config.IRODSCSNegotiationPolicy)
+		if err != nil {
+			log.Debugf("failed to create iRODS client-server negotiation policy from string '%s'", config.IRODSCSNegotiationPolicy)
+			return nil, err
+		}
+
+		irodsAccount.SetCSNegotiation(true, require)
+
+		if len(config.IRODSSSLCACertificatePath) > 0 {
+			sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
+			if err != nil {
+				log.Debugf("failed to create iRODS SSL config for auth")
+				return nil, err
+			}
+
+			irodsAccount.SetSSLConfiguration(sslConf)
+		}
 	}
 
 	return irodsAccount, nil
@@ -79,7 +91,6 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 	switch strings.ToLower(config.IRODSAuthScheme) {
 	case "", "native", "pam_for_users":
 		// pam_for_users auth mode uses native auth to use proxy
-
 		irodsAccount, err = irodsclient_types.CreateIRODSProxyAccount(config.IRODSHost, config.IRODSPort, config.SFTPGoAuthdUsername, config.IRODSZone, config.IRODSProxyUsername, config.IRODSZone, irodsclient_types.AuthSchemeNative, config.IRODSProxyPassword, "")
 		if err != nil {
 			log.Debugf("failed to create iRODS account for proxy auth")
@@ -91,16 +102,28 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 			log.Debugf("failed to create iRODS account for proxy auth")
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("unknown authentication scheme %s", config.IRODSAuthScheme)
+	}
 
-		sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
+	if config.IRODSRequireCSNegotiation {
+		require, err := irodsclient_types.GetCSNegotiationRequire(config.IRODSCSNegotiationPolicy)
 		if err != nil {
-			log.Debugf("failed to create iRODS SSL config for auth")
+			log.Debugf("failed to create iRODS client-server negotiation policy from string '%s'", config.IRODSCSNegotiationPolicy)
 			return nil, err
 		}
 
-		irodsAccount.SetSSLConfiguration(sslConf)
-	default:
-		return nil, fmt.Errorf("unknown authentication scheme %s", config.IRODSAuthScheme)
+		irodsAccount.SetCSNegotiation(true, require)
+
+		if len(config.IRODSSSLCACertificatePath) > 0 {
+			sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
+			if err != nil {
+				log.Debugf("failed to create iRODS SSL config for auth")
+				return nil, err
+			}
+
+			irodsAccount.SetSSLConfiguration(sslConf)
+		}
 	}
 
 	return irodsAccount, nil

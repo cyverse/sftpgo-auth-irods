@@ -28,18 +28,20 @@ type SFTPGoSecret struct {
 
 // SFTPGoIRODSFsConfig is a filesystem data type for SFTPGo
 type SFTPGoIRODSFsConfig struct {
-	Endpoint             string        `json:"endpoint"`
-	Username             string        `json:"username"`
-	ProxyUsername        string        `json:"proxy_username,omitempty"`
-	Password             *SFTPGoSecret `json:"password"`
-	CollectionPath       string        `json:"collection_path"`
-	Resource             string        `json:"resource,omitempty"`
-	AuthScheme           string        `json:"auth_scheme,omitempty"`
-	SSLCACertificatePath string        `json:"ssl_ca_cert_path,omitempty"`
-	SSLKeySize           int           `json:"ssl_key_size,omitempty"`
-	SSLAlgorithm         string        `json:"ssl_algorithm,omitempty"`
-	SSLSaltSize          int           `json:"ssl_salt_size,omitempty"`
-	SSLHashRounds        int           `json:"ssl_hash_rounds,omitempty"`
+	Endpoint                       string        `json:"endpoint"`
+	Username                       string        `json:"username"`
+	ProxyUsername                  string        `json:"proxy_username,omitempty"`
+	Password                       *SFTPGoSecret `json:"password"`
+	CollectionPath                 string        `json:"collection_path"`
+	Resource                       string        `json:"resource,omitempty"`
+	AuthScheme                     string        `json:"auth_scheme,omitempty"`
+	RequireClientServerNegotiation bool          `json:"require_cs_negotiation,omitempty"`
+	ClientServerNegotiationPolicy  string        `json:"cs_negotiation_policy,omitempty"`
+	SSLCACertificatePath           string        `json:"ssl_ca_cert_path,omitempty"`
+	SSLKeySize                     int           `json:"ssl_key_size,omitempty"`
+	SSLAlgorithm                   string        `json:"ssl_algorithm,omitempty"`
+	SSLSaltSize                    int           `json:"ssl_salt_size,omitempty"`
+	SSLHashRounds                  int           `json:"ssl_hash_rounds,omitempty"`
 }
 
 // GetRedacted returns a redacted SFTPGoIRODSFsConfig
