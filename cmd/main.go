@@ -128,7 +128,11 @@ func authPublicKeyFake(config *commons.Config) (*types.SFTPGoUser, error) {
 		mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
 	}
 
-	sftpGoUser := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
+	sftpGoUser, err := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
+	if err != nil {
+		return nil, err
+	}
+
 	return sftpGoUser, nil
 }
 
@@ -154,7 +158,11 @@ func authPasswordFake(config *commons.Config) (*types.SFTPGoUser, error) {
 		mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
 	}
 
-	sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
+	sftpGoUser, err := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
+	if err != nil {
+		return nil, err
+	}
+
 	return sftpGoUser, nil
 }
 
@@ -210,7 +218,11 @@ func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 			}
 		}
 
-		sftpGoUser := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
+		sftpGoUser, err := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
+		if err != nil {
+			return nil, err
+		}
+
 		return sftpGoUser, nil
 	}
 
@@ -254,7 +266,11 @@ func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
 			mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
 		}
 
-		sftpGoUser := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
+		sftpGoUser, err := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
+		if err != nil {
+			return nil, err
+		}
+
 		return sftpGoUser, nil
 	}
 

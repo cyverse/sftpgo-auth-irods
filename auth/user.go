@@ -74,9 +74,16 @@ func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGo
 	}
 }
 
-func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPaths []types.MountPath) []types.SFTPGoVirtualFolder {
+func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPaths []types.MountPath) ([]types.SFTPGoVirtualFolder, error) {
 	vfolders := []types.SFTPGoVirtualFolder{}
+	reservedNames := map[string]bool{}
+
 	for _, mountPath := range mountPaths {
+		if _, ok := reservedNames[mountPath.Name]; ok {
+			// already reserved name
+			return nil, fmt.Errorf("duplicated virtual folder name %s", mountPath.Name)
+		}
+
 		vfolder := types.SFTPGoVirtualFolder{
 			Name:        mountPath.Name,
 			Description: mountPath.Description,
@@ -86,19 +93,26 @@ func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPath
 		}
 
 		vfolders = append(vfolders, vfolder)
+
+		reservedNames[mountPath.Name] = true
 	}
 
-	return vfolders
+	return vfolders, nil
 }
 
-func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []types.MountPath) *types.SFTPGoUser {
+func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []types.MountPath) (*types.SFTPGoUser, error) {
+	vfolders, err := makeVirtualFolders(config, sftpgoUsername, mountPaths)
+	if err != nil {
+		return nil, err
+	}
+
 	return &types.SFTPGoUser{
 		Status:         1,
 		Username:       sftpgoUsername,
 		HomeDir:        makeLocalUserPath(config, sftpgoUsername),
-		VirtualFolders: makeVirtualFolders(config, sftpgoUsername, mountPaths),
+		VirtualFolders: vfolders,
 		Permissions:    makePermissions(config, mountPaths),
 		Filters:        makeFilters(config),
 		FileSystem:     makeLocalFileSystem(),
-	}
+	}, nil
 }
