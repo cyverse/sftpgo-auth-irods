@@ -53,13 +53,18 @@ func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGo
 		}
 	}
 
+	password := config.SFTPGoAuthdPassword
+	if len(config.IRODSProxyUsername) > 0 {
+		password = config.IRODSProxyPassword
+	}
+
 	return &types.SFTPGoFileSystem{
 		Provider: sdk.IRODSFilesystemProvider,
 		IRODSConfig: &types.SFTPGoIRODSFsConfig{
 			Endpoint:                       fmt.Sprintf("%s:%d", config.IRODSHost, config.IRODSPort),
 			Username:                       config.SFTPGoAuthdUsername,
 			ProxyUsername:                  config.IRODSProxyUsername,
-			Password:                       types.NewSFTPGoSecretForUserPassword(config.IRODSProxyPassword),
+			Password:                       types.NewSFTPGoSecretForUserPassword(password),
 			CollectionPath:                 collectionPath,
 			Resource:                       "",
 			AuthScheme:                     authScheme,
