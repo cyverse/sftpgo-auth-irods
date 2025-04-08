@@ -62,22 +62,21 @@ func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, 
 
 	// SSL
 	if config.IRODSRequireCSNegotiation {
-		require, err := irodsclient_types.GetCSNegotiationRequire(config.IRODSCSNegotiationPolicy)
-		if err != nil {
-			log.Debugf("failed to create iRODS client-server negotiation policy from string '%s'", config.IRODSCSNegotiationPolicy)
-			return nil, err
-		}
-
+		require := irodsclient_types.GetCSNegotiationPolicyRequest(config.IRODSCSNegotiationPolicy)
 		irodsAccount.SetCSNegotiation(true, require)
 
-		if len(config.IRODSSSLCACertificatePath) > 0 {
-			sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
-			if err != nil {
-				log.Debugf("failed to create iRODS SSL config for auth")
-				return nil, err
+		if require == irodsclient_types.CSNegotiationPolicyRequestSSL || len(config.IRODSSSLCACertificatePath) > 0 {
+			// SSL
+			sslConf := irodsclient_types.IRODSSSLConfig{
+				CACertificatePath:       config.IRODSSSLCACertificatePath,
+				EncryptionKeySize:       config.IRODSSSLKeySize,
+				EncryptionAlgorithm:     config.IRODSSSLAlgorithm,
+				EncryptionSaltSize:      config.IRODSSSLSaltSize,
+				EncryptionNumHashRounds: config.IRODSSSLHashRounds,
+				VerifyServer:            irodsclient_types.SSLVerifyServerNone,
 			}
 
-			irodsAccount.SetSSLConfiguration(sslConf)
+			irodsAccount.SetSSLConfiguration(&sslConf)
 		}
 	}
 
@@ -107,7 +106,7 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 	}
 
 	if config.IRODSRequireCSNegotiation {
-		require, err := irodsclient_types.GetCSNegotiationRequire(config.IRODSCSNegotiationPolicy)
+		require := irodsclient_types.GetCSNegotiationPolicyRequest(config.IRODSCSNegotiationPolicy)
 		if err != nil {
 			log.Debugf("failed to create iRODS client-server negotiation policy from string '%s'", config.IRODSCSNegotiationPolicy)
 			return nil, err
@@ -115,14 +114,18 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 
 		irodsAccount.SetCSNegotiation(true, require)
 
-		if len(config.IRODSSSLCACertificatePath) > 0 {
-			sslConf, err := irodsclient_types.CreateIRODSSSLConfig(config.IRODSSSLCACertificatePath, config.IRODSSSLKeySize, config.IRODSSSLAlgorithm, config.IRODSSSLSaltSize, config.IRODSSSLHashRounds)
-			if err != nil {
-				log.Debugf("failed to create iRODS SSL config for auth")
-				return nil, err
+		if require == irodsclient_types.CSNegotiationPolicyRequestSSL || len(config.IRODSSSLCACertificatePath) > 0 {
+			// SSL
+			sslConf := irodsclient_types.IRODSSSLConfig{
+				CACertificatePath:       config.IRODSSSLCACertificatePath,
+				EncryptionKeySize:       config.IRODSSSLKeySize,
+				EncryptionAlgorithm:     config.IRODSSSLAlgorithm,
+				EncryptionSaltSize:      config.IRODSSSLSaltSize,
+				EncryptionNumHashRounds: config.IRODSSSLHashRounds,
+				VerifyServer:            irodsclient_types.SSLVerifyServerNone,
 			}
 
-			irodsAccount.SetSSLConfiguration(sslConf)
+			irodsAccount.SetSSLConfiguration(&sslConf)
 		}
 	}
 
@@ -223,7 +226,7 @@ func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IROD
 	// get .ssh/authorized_keys file
 	sshAuthorizedKeysPath := makeSSHAuthorizedKeysPath(config)
 	log.Debugf("checking .ssh/authorized_keys file '%s'", sshAuthorizedKeysPath)
-	sshAuthorizedKeysDataObject, err := irodsclient_fs.GetDataObjectMasterReplica(irodsConn, sshCollection, authorizedKeyFilename)
+	sshAuthorizedKeysDataObject, err := irodsclient_fs.GetDataObjectMasterReplica(irodsConn, sshAuthorizedKeysPath)
 	if err != nil {
 		log.Debugf(".ssh/authorized_keys file not exist '%s'", sshAuthorizedKeysPath)
 		return nil, err
@@ -235,7 +238,7 @@ func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IROD
 		return nil, err
 	}
 
-	fileHandle, _, err := irodsclient_fs.OpenDataObject(irodsConn, sshAuthorizedKeysPath, "", "r")
+	fileHandle, _, err := irodsclient_fs.OpenDataObject(irodsConn, sshAuthorizedKeysPath, "", "r", nil)
 	if err != nil {
 		log.Debugf("failed to open .ssh/authorized_keys file '%s'", sshAuthorizedKeysPath)
 		return nil, err
