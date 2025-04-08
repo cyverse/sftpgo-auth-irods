@@ -2,8 +2,6 @@ module github.com/cyverse/sftpgo-auth-irods
 
 go 1.22
 
-toolchain go1.22.10
-
 require (
 	github.com/cyverse/go-irodsclient v0.17.1
 	github.com/gliderlabs/ssh v0.3.3
