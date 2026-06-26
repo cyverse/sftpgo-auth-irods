@@ -83,6 +83,14 @@ func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, 
 	return irodsAccount, nil
 }
 
+func makeIRODSConnectionConfig() *irodsclient_conn.IRODSConnectionConfig {
+	return &irodsclient_conn.IRODSConnectionConfig{
+		OperationTimeout:     authRequestTimeout,
+		LongOperationTimeout: authRequestTimeout,
+		ApplicationName:      applicationName,
+	}
+}
+
 func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSAccount, error) {
 	var irodsAccount *irodsclient_types.IRODSAccount
 	var err error
@@ -139,7 +147,13 @@ func AuthViaPassword(config *commons.Config) (bool, error) {
 		return false, err
 	}
 
-	irodsConn := irodsclient_conn.NewIRODSConnection(irodsAccount, authRequestTimeout, applicationName)
+	irodsConnectionConfig := makeIRODSConnectionConfig()
+
+	irodsConn, err := irodsclient_conn.NewIRODSConnection(irodsAccount, irodsConnectionConfig)
+	if err != nil {
+		return false, err
+	}
+
 	err = irodsConn.Connect()
 	if err != nil {
 		// auth fail
@@ -166,7 +180,12 @@ func AuthViaPublicKey(config *commons.Config) (bool, []string, error) {
 		return false, nil, err
 	}
 
-	irodsConn := irodsclient_conn.NewIRODSConnection(irodsAccount, authRequestTimeout, applicationName)
+	irodsConnectionConfig := makeIRODSConnectionConfig()
+
+	irodsConn, err := irodsclient_conn.NewIRODSConnection(irodsAccount, irodsConnectionConfig)
+	if err != nil {
+		return false, nil, err
+	}
 	err = irodsConn.Connect()
 	if err != nil {
 		// auth fail
@@ -286,7 +305,12 @@ func CreateSshDir(config *commons.Config) error {
 		}
 	}
 
-	irodsConn := irodsclient_conn.NewIRODSConnection(irodsAccount, authRequestTimeout, applicationName)
+	irodsConnectionConfig := makeIRODSConnectionConfig()
+
+	irodsConn, err := irodsclient_conn.NewIRODSConnection(irodsAccount, irodsConnectionConfig)
+	if err != nil {
+		return err
+	}
 	err = irodsConn.Connect()
 	if err != nil {
 		// auth fail
