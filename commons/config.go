@@ -51,6 +51,10 @@ type Config struct {
 
 	// for Logging
 	SFTPGoLogDir string `envconfig:"SFTPGO_LOG_DIR"`
+
+	// for SFTPGo REST API (folder management)
+	SFTPGoAPIBaseURL string `envconfig:"SFTPGO_API_BASE_URL"`
+	SFTPGoAPIKey     string `envconfig:"SFTPGO_API_KEY"`
 }
 
 func GetDefaultLogPath() string {
@@ -165,6 +169,9 @@ func (config *Config) Validate() error {
 	if len(config.SFTPGoHomeDir) == 0 {
 		return errors.New("home dir is not given")
 	}
+	if (len(config.SFTPGoAPIBaseURL) == 0) != (len(config.SFTPGoAPIKey) == 0) {
+		return errors.New("both SFTPGO_API_BASE_URL and SFTPGO_API_KEY must be set together")
+	}
 	return nil
 }
 
@@ -202,6 +209,11 @@ func (config *Config) IsProxyAuth() bool {
 // HasSharedDir checks if shared dir is provided
 func (config *Config) HasSharedDir() bool {
 	return len(config.IRODSShared) > 0
+}
+
+// HasSFTPGoAPI checks if SFTPGo REST API is configured
+func (config *Config) HasSFTPGoAPI() bool {
+	return len(config.SFTPGoAPIBaseURL) > 0 && len(config.SFTPGoAPIKey) > 0
 }
 
 // GetSharedDirName returns shared dir's name

@@ -86,8 +86,8 @@ type SFTPGoVirtualFolder struct {
 // SFTPGoFolder is a folder data type for SFTPGo
 type SFTPGoFolder struct {
 	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	FileSystem  *SFTPGoFileSystem `json:"filesystem"`
+	Description string            `json:"description,omitempty"`
+	FileSystem  *SFTPGoFileSystem `json:"filesystem,omitempty"`
 }
 
 // SFTPGoUser is a user data type for SFTPGo

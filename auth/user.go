@@ -111,6 +111,12 @@ func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []
 		return nil, err
 	}
 
+	if config.HasSFTPGoAPI() {
+		if err := EnsureVirtualFolders(config, vfolders); err != nil {
+			return nil, fmt.Errorf("failed to ensure virtual folders in SFTPGo: %w", err)
+		}
+	}
+
 	return &types.SFTPGoUser{
 		Status:         1,
 		Username:       sftpgoUsername,
