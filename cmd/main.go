@@ -51,10 +51,10 @@ func main() {
 	_, err = os.Stat(config.SFTPGoLogDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err2 := os.MkdirAll(config.SFTPGoLogDir, 0644)
+			err2 := os.MkdirAll(config.SFTPGoLogDir, 0755)
 			if err2 != nil {
 				// failed to create a log dir
-				exitError(err)
+				exitError(err2)
 				return
 			}
 		} else {
