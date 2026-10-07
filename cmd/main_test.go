@@ -405,6 +405,46 @@ func TestPublicKeyAuthHomeOption(t *testing.T) {
 	}
 }
 
+// TestPublicKeyAuthHomeOptionMatchingDefault checks that a home= option naming
+// the default home, however it is spelled, does not create a second SFTPGo user
+// and virtual folder for a collection the plain user already reaches.
+func TestPublicKeyAuthHomeOptionMatchingDefault(t *testing.T) {
+	options := []string{
+		fmt.Sprintf("home=%q", testUserHome),
+		fmt.Sprintf("home=%q", testUserHome+"/"),
+		fmt.Sprintf("home=%q", "/"+testUserHome),
+		fmt.Sprintf("home=%q", testUserHome+"/."),
+	}
+
+	for _, option := range options {
+		t.Run(option, func(t *testing.T) {
+			env := baseEnv()
+			env["IRODS_PROXY_USER"] = testProxyUsername
+			env["IRODS_PROXY_PASSWORD"] = testProxyPassword
+			env["SFTPGO_AUTHD_PUBLIC_KEY"] = testPublicKey
+
+			config := readConfig(t, env)
+			stubAuth(t, true, []string{option}, nil)
+
+			user, err := authPublicKey(config)
+			if err != nil {
+				t.Fatalf("authPublicKey() failed: %v", err)
+			}
+
+			if user.Username != testUsername {
+				t.Errorf("username = %q, want the plain %q", user.Username, testUsername)
+			}
+			if got, want := virtualFolderNames(user), []string{testUsername + "_home"}; !equalStrings(got, want) {
+				t.Fatalf("virtual folders = %v, want %v", got, want)
+			}
+			home := findVirtualFolder(t, user, testUsername+"_home")
+			if home.FileSystem.IRODSConfig.CollectionPath != testUserHome {
+				t.Errorf("collection path = %q, want %q", home.FileSystem.IRODSConfig.CollectionPath, testUserHome)
+			}
+		})
+	}
+}
+
 // TestPublicKeyNameDistinguishesKeys checks that two keys of the same type do
 // not collapse onto the same SFTPGo user name.
 func TestPublicKeyNameDistinguishesKeys(t *testing.T) {

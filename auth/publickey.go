@@ -196,8 +196,10 @@ func GetHomeCollectionPath(config *commons.Config, options []string) string {
 				}
 
 				if optV[0] == '/' {
-					// absolute
-					return optV
+					// absolute. Clean it so that a path spelled differently
+					// from the default home, such as a trailing slash, is not
+					// mistaken for a custom one by the caller
+					return path.Clean(optV)
 				}
 				return path.Join(userHome, optV)
 			}

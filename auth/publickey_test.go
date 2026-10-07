@@ -435,6 +435,38 @@ func TestGetHomeCollectionPath(t *testing.T) {
 			want:    testUserHome + "/projA",
 		},
 		{
+			// the caller compares the result with the default home, so a path
+			// spelled differently must still normalize to it
+			name:    "absolute path with a trailing slash",
+			options: []string{`home="` + testUserHome + `/"`},
+			want:    testUserHome,
+		},
+		{
+			name:    "absolute path with a doubled slash",
+			options: []string{`home="/` + testUserHome + `"`},
+			want:    testUserHome,
+		},
+		{
+			name:    "absolute path with a dot segment",
+			options: []string{`home="` + testUserHome + `/."`},
+			want:    testUserHome,
+		},
+		{
+			name:    "absolute subcollection with a trailing slash",
+			options: []string{`home="` + testUserHome + `/projA/"`},
+			want:    testUserHome + "/projA",
+		},
+		{
+			name:    "absolute subcollection with a dot segment",
+			options: []string{`home="` + testUserHome + `/./projA"`},
+			want:    testUserHome + "/projA",
+		},
+		{
+			name:    "relative path with a trailing slash",
+			options: []string{`home="projA/"`},
+			want:    testUserHome + "/projA",
+		},
+		{
 			name:    "nested relative path",
 			options: []string{`home="sub/dir"`},
 			want:    testUserHome + "/sub/dir",
@@ -483,9 +515,25 @@ func TestGetHomeCollectionPath(t *testing.T) {
 func TestGetHomeCollectionPathMatchesDefault(t *testing.T) {
 	config := testConfig()
 
-	got := GetHomeCollectionPath(config, []string{`home="` + testUserHome + `"`})
-	if got != config.GetHomeDirPath() {
-		t.Errorf("GetHomeCollectionPath() = %q, want the default home %q", got, config.GetHomeDirPath())
+	// every spelling of the default home has to compare equal to it, otherwise
+	// the key is given its own SFTPGo user and virtual folder for no reason
+	options := []string{
+		`home="` + testUserHome + `"`,
+		`home="` + testUserHome + `/"`,
+		`home="/` + testUserHome + `"`,
+		`home="` + testUserHome + `/."`,
+		`home="."`,
+		`home=""`,
+	}
+
+	for _, option := range options {
+		t.Run(option, func(t *testing.T) {
+			got := GetHomeCollectionPath(config, []string{option})
+			if got != config.GetHomeDirPath() {
+				t.Errorf("GetHomeCollectionPath([%s]) = %q, want the default home %q",
+					option, got, config.GetHomeDirPath())
+			}
+		})
 	}
 }
 
