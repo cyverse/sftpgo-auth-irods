@@ -163,19 +163,21 @@ func matchIP(clientIP string, filter string) bool {
 }
 
 // wildCardToRegexp converts a wildcard pattern to a regular expression pattern.
+// The pattern is anchored to match the whole input, and '?' matches exactly one
+// character, as in OpenSSH's pattern matching.
 func wildCardToRegexp(pattern string) string {
-	regexString := ""
+	regexString := "^"
 	for _, c := range pattern {
 		if c == '*' {
 			regexString += ".*"
 		} else if c == '?' {
-			regexString += ".?"
+			regexString += "."
 		} else {
 			regexString += regexp.QuoteMeta(string(c))
 		}
 	}
 
-	return regexString
+	return regexString + "$"
 }
 
 // GetHomeCollectionPath returns home collection path
