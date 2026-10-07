@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -344,12 +346,17 @@ func printSuccessResponse(sftpGoUser *types.SFTPGoUser) {
 	os.Exit(0)
 }
 
+// makeSafePublickKeyName returns a short name that uniquely identifies the given
+// public key. The leading characters of a key blob only encode the key type, so
+// the blob is hashed to tell keys of the same type apart.
 func makeSafePublickKeyName(pubkey string) string {
+	key := strings.TrimSpace(pubkey)
 	fields := strings.Fields(pubkey)
-	key := pubkey
 	if len(fields) >= 2 {
+		// drop the key type and the trailing comment
 		key = fields[1]
 	}
 
-	return strings.ReplaceAll(key[:15], " ", "_")
+	hash := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(hash[:])[:16]
 }
