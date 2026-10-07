@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"bufio"
 	"io"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,13 +122,76 @@ func TestCheckAuthorizedKey(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			found, options := checkAuthorizedKey([]byte(test.authorizedKeys), mustParseKey(t, test.userKey))
+			found, options, err := checkAuthorizedKey([]byte(test.authorizedKeys), mustParseKey(t, test.userKey))
+			if err != nil {
+				t.Fatalf("checkAuthorizedKey() failed: %v", err)
+			}
 
 			if found != test.wantFound {
 				t.Fatalf("found = %v, want %v", found, test.wantFound)
 			}
 			if !equalStrings(options, test.wantOptions) {
 				t.Errorf("options = %v, want %v", options, test.wantOptions)
+			}
+		})
+	}
+}
+
+// TestCheckAuthorizedKeyLongLine checks that a line the scanner cannot hold
+// reports an error. Without it the scan stops early and the keys after that
+// line are never read, which is indistinguishable from the key not being
+// listed at all.
+func TestCheckAuthorizedKeyLongLine(t *testing.T) {
+	// longer than bufio.MaxScanTokenSize
+	longLine := "# " + strings.Repeat("x", bufio.MaxScanTokenSize+1)
+
+	tests := []struct {
+		name           string
+		authorizedKeys string
+		wantFound      bool
+		wantErr        bool
+	}{
+		{
+			name:           "long line before the key",
+			authorizedKeys: keyA + "\n" + longLine + "\n" + keyB,
+			wantErr:        true,
+		},
+		{
+			name:           "long line after the key",
+			authorizedKeys: keyB + "\n" + longLine,
+			wantFound:      true,
+		},
+		{
+			name:           "the whole file on one line",
+			authorizedKeys: strings.Repeat(keyA+" ", 1000) + keyB,
+			wantErr:        true,
+		},
+		{
+			name:           "a long line on its own",
+			authorizedKeys: longLine,
+			wantErr:        true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			found, _, err := checkAuthorizedKey([]byte(test.authorizedKeys), mustParseKey(t, keyB))
+
+			if test.wantErr {
+				if err == nil {
+					t.Fatalf("checkAuthorizedKey() returned found=%v and no error, want an error", found)
+				}
+				if found {
+					t.Error("checkAuthorizedKey() reported a match alongside the error")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("checkAuthorizedKey() failed: %v", err)
+			}
+			if found != test.wantFound {
+				t.Errorf("found = %v, want %v", found, test.wantFound)
 			}
 		})
 	}

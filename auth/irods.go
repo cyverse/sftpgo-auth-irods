@@ -198,7 +198,12 @@ func AuthViaPublicKey(config *commons.Config) (bool, []string, error) {
 		return false, nil, err
 	}
 
-	loggedIn, options := checkAuthorizedKey(authorizedKeys, userKey)
+	loggedIn, options, err := checkAuthorizedKey(authorizedKeys, userKey)
+	if err != nil {
+		// auth fail
+		return false, nil, err
+	}
+
 	if loggedIn {
 		log.Debugf("checking options - %v", options)
 		// expiry

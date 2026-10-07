@@ -10,12 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
-func checkAuthorizedKey(authorizedKeys []byte, userKey ssh.PublicKey) (bool, []string) {
+func checkAuthorizedKey(authorizedKeys []byte, userKey ssh.PublicKey) (bool, []string, error) {
 	authorizedKeysReader := bytes.NewReader(authorizedKeys)
 	authorizedKeysScanner := bufio.NewScanner(authorizedKeysReader)
 
@@ -35,11 +36,18 @@ func checkAuthorizedKey(authorizedKeys []byte, userKey ssh.PublicKey) (bool, []s
 
 		if bytes.Equal(authorizedKey.Marshal(), userKey.Marshal()) {
 			// found
-			return true, options
+			return true, options, nil
 		}
 	}
 
-	return false, nil
+	if err := authorizedKeysScanner.Err(); err != nil {
+		// a line longer than the scanner's buffer ends the scan early, which
+		// would otherwise be reported as the key not being listed while the
+		// keys after that line were never read
+		return false, nil, errors.Wrap(err, "failed to read authorized_keys")
+	}
+
+	return false, nil, nil
 }
 
 // parseExpiryTime parses the value of an expiry-time option. OpenSSH accepts
