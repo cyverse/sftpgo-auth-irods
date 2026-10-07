@@ -1,12 +1,11 @@
 PKG=github.com/cyverse/sftpgo-auth-irods
-VERSION=v0.2.0
+VERSION=v0.2.1
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X '${PKG}/commons.releaseVersion=${VERSION}' -X '${PKG}/commons.gitCommit=${GIT_COMMIT}' -X '${PKG}/commons.buildDate=${BUILD_DATE}'"
 GO111MODULE=on
 GOPROXY=direct
 GOPATH=$(shell go env GOPATH)
-
 .EXPORT_ALL_VARIABLES:
 
 .PHONY: build
@@ -17,10 +16,3 @@ build:
 .PHONY: test
 test:
 	go test ./...
-
-.PHONY: release
-release: build
-	mkdir -p release
-	mkdir -p release/bin
-	cp bin/sftpgo-auth-irods release/bin
-	cd release && tar zcvf ../sftpgo-auth-irods.tar.gz *
