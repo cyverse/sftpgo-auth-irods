@@ -588,6 +588,97 @@ func TestSharedDir(t *testing.T) {
 	}
 }
 
+// TestSharedDirColludingWithTheUsername checks that a shared directory whose
+// last element equals the user name does not block the login. Both folders
+// would mount at the same virtual path, so the shared one is dropped and the
+// home stays reachable.
+func TestSharedDirColludingWithTheUsername(t *testing.T) {
+	tests := []struct {
+		name   string
+		shared string
+	}{
+		{
+			// the home collection and the shared collection coincide
+			name:   "shared directory inside home",
+			shared: "/" + testIRODSZone + "/home/" + testUsername,
+		},
+		{
+			// a different collection that would shadow the home mount
+			name:   "shared directory elsewhere",
+			shared: "/" + testIRODSZone + "/community/" + testUsername,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			env := baseEnv()
+			env["SFTPGO_AUTHD_PASSWORD"] = testUserPassword
+			env["IRODS_SHARED"] = test.shared
+
+			config := readConfig(t, env)
+			stubAuth(t, true, nil, nil)
+
+			user, err := authPassword(config)
+			if err != nil {
+				t.Fatalf("authPassword() failed: %v", err)
+			}
+
+			// only the home survives, and it keeps the home collection
+			if got, want := virtualFolderNames(user), []string{testUsername + "_home"}; !equalStrings(got, want) {
+				t.Fatalf("virtual folders = %v, want %v", got, want)
+			}
+			home := findVirtualFolder(t, user, testUsername+"_home")
+			if home.FileSystem.IRODSConfig.CollectionPath != testUserHome {
+				t.Errorf("collection path = %q, want the home %q",
+					home.FileSystem.IRODSConfig.CollectionPath, testUserHome)
+			}
+			if got, want := home.VirtualPath, "/"+testUsername; got != want {
+				t.Errorf("virtual path = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+// TestVirtualFoldersAreDistinct checks that the folders a normal login produces
+// do not overlap.
+func TestVirtualFoldersAreDistinct(t *testing.T) {
+	env := baseEnv()
+	env["SFTPGO_AUTHD_PASSWORD"] = testUserPassword
+	env["IRODS_SHARED"] = testSharedDir
+
+	config := readConfig(t, env)
+	stubAuth(t, true, nil, nil)
+
+	user, err := authPassword(config)
+	if err != nil {
+		t.Fatalf("authPassword() failed: %v", err)
+	}
+
+	seenNames := map[string]bool{}
+	seenPaths := map[string]bool{}
+	seenMapped := map[string]bool{}
+	for _, vfolder := range user.VirtualFolders {
+		if seenNames[vfolder.Name] {
+			t.Errorf("virtual folder name %q appears twice", vfolder.Name)
+		}
+		if seenPaths[vfolder.VirtualPath] {
+			t.Errorf("virtual path %q appears twice", vfolder.VirtualPath)
+		}
+		if seenMapped[vfolder.MappedPath] {
+			t.Errorf("mapped path %q appears twice", vfolder.MappedPath)
+		}
+		seenNames[vfolder.Name] = true
+		seenPaths[vfolder.VirtualPath] = true
+		seenMapped[vfolder.MappedPath] = true
+	}
+
+	// every mounted folder has to be reachable, so there is one permission
+	// entry per folder plus the root listing
+	if got, want := len(user.Permissions), len(user.VirtualFolders)+1; got != want {
+		t.Errorf("permission entries = %d, want %d: %v", got, want, user.Permissions)
+	}
+}
+
 // TestRedactedJSONHidesPassword checks that the logged representation does not
 // carry the password, while the response sent to SFTPGo still does.
 func TestRedactedJSONHidesPassword(t *testing.T) {

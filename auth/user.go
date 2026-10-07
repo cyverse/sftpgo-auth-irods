@@ -9,6 +9,7 @@ import (
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
 	"github.com/sftpgo/sdk"
+	log "github.com/sirupsen/logrus"
 )
 
 func makeLocalUserPath(config *commons.Config, sftpgoUsername string) string {
@@ -83,6 +84,7 @@ func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGo
 func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPaths []types.MountPath) ([]types.SFTPGoVirtualFolder, error) {
 	vfolders := []types.SFTPGoVirtualFolder{}
 	reservedNames := map[string]bool{}
+	reservedPaths := map[string]bool{}
 
 	for _, mountPath := range mountPaths {
 		if _, ok := reservedNames[mountPath.Name]; ok {
@@ -90,17 +92,27 @@ func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPath
 			return nil, errors.Errorf("duplicated virtual folder name %q", mountPath.Name)
 		}
 
+		virtualPath := fmt.Sprintf("/%s", mountPath.DirName)
+		if _, ok := reservedPaths[virtualPath]; ok {
+			// a second folder at the same path would shadow the first one.
+			// Mount paths are ordered with the home first, so dropping this one
+			// keeps the home reachable instead of failing the login.
+			log.Warnf("skipping virtual folder %q: it would mount at %q, which is already taken", mountPath.Name, virtualPath)
+			continue
+		}
+
 		vfolder := types.SFTPGoVirtualFolder{
 			Name:        mountPath.Name,
 			Description: mountPath.Description,
 			MappedPath:  makeLocalUserSubPath(config, sftpgoUsername, mountPath.DirName),
-			VirtualPath: fmt.Sprintf("/%s", mountPath.DirName),
+			VirtualPath: virtualPath,
 			FileSystem:  makeFileSystem(config, mountPath.CollectionPath),
 		}
 
 		vfolders = append(vfolders, vfolder)
 
 		reservedNames[mountPath.Name] = true
+		reservedPaths[virtualPath] = true
 	}
 
 	return vfolders, nil
