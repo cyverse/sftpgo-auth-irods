@@ -170,18 +170,22 @@ func matchIP(clientIP string, filter string) bool {
 // The pattern is anchored to match the whole input, and '?' matches exactly one
 // character, as in OpenSSH's pattern matching.
 func wildCardToRegexp(pattern string) string {
-	regexString := "^"
+	var regexString strings.Builder
+
+	regexString.WriteString("^")
 	for _, c := range pattern {
-		if c == '*' {
-			regexString += ".*"
-		} else if c == '?' {
-			regexString += "."
-		} else {
-			regexString += regexp.QuoteMeta(string(c))
+		switch c {
+		case '*':
+			regexString.WriteString(".*")
+		case '?':
+			regexString.WriteString(".")
+		default:
+			regexString.WriteString(regexp.QuoteMeta(string(c)))
 		}
 	}
+	regexString.WriteString("$")
 
-	return regexString + "$"
+	return regexString.String()
 }
 
 // GetHomeCollectionPath returns the home collection path a key is confined to,

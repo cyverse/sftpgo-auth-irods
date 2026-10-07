@@ -20,7 +20,7 @@ func makeLocalUserSubPath(config *commons.Config, sftpgoUsername string, name st
 	return path.Join(config.SFTPGoHomeDir, sftpgoUsername, name)
 }
 
-func makePermissions(config *commons.Config, mountPaths []types.MountPath) map[string][]string {
+func makePermissions(mountPaths []types.MountPath) map[string][]string {
 	permissions := make(map[string][]string)
 	permissions["/"] = []string{"list"}
 
@@ -32,7 +32,7 @@ func makePermissions(config *commons.Config, mountPaths []types.MountPath) map[s
 	return permissions
 }
 
-func makeFilters(config *commons.Config) *types.SFTPGoUserFilter {
+func makeFilters() *types.SFTPGoUserFilter {
 	return &types.SFTPGoUserFilter{
 		AllowedIP:          []string{},
 		DeniedLoginMethods: []string{},
@@ -135,8 +135,8 @@ func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []
 		Username:       sftpgoUsername,
 		HomeDir:        makeLocalUserPath(config, sftpgoUsername),
 		VirtualFolders: vfolders,
-		Permissions:    makePermissions(config, mountPaths),
-		Filters:        makeFilters(config),
+		Permissions:    makePermissions(mountPaths),
+		Filters:        makeFilters(),
 		FileSystem:     makeLocalFileSystem(),
 	}, nil
 }

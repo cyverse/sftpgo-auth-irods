@@ -161,7 +161,9 @@ func TestReadAllLimitedKeepsUsableKeys(t *testing.T) {
 	// keyA near the front, keyB past the limit
 	var authorizedKeys bytes.Buffer
 	authorizedKeys.WriteString(keyA + "\n")
-	authorizedKeys.WriteString("# " + strings.Repeat("x", 4096) + "\n")
+	authorizedKeys.WriteString("# ")
+	authorizedKeys.WriteString(strings.Repeat("x", 4096))
+	authorizedKeys.WriteString("\n")
 	authorizedKeys.WriteString(keyB + "\n")
 
 	limit := int64(2048)
