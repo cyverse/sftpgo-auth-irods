@@ -23,11 +23,9 @@ func main() {
 
 	// Parse parameters
 	var version bool
-	var fakeoutput bool
 
 	flag.BoolVar(&version, "version", false, "Print client version information")
 	flag.BoolVar(&version, "v", false, "Print client version information (shorthand form)")
-	flag.BoolVar(&fakeoutput, "fake", false, "Generate fake output json")
 
 	flag.Parse()
 
@@ -74,15 +72,7 @@ func main() {
 	}
 
 	if config.IsPublicKeyAuth() {
-		var sftpGoUser *types.SFTPGoUser
-		var err error
-
-		if fakeoutput {
-			sftpGoUser, err = authPublicKeyFake(config)
-		} else {
-			sftpGoUser, err = authPublicKey(config)
-		}
-
+		sftpGoUser, err := authPublicKey(config)
 		if err != nil {
 			exitError(err)
 			return
@@ -91,15 +81,7 @@ func main() {
 		printSuccessResponse(sftpGoUser)
 		return
 	} else {
-		var sftpGoUser *types.SFTPGoUser
-		var err error
-
-		if fakeoutput {
-			sftpGoUser, err = authPasswordFake(config)
-		} else {
-			sftpGoUser, err = authPassword(config)
-		}
-
+		sftpGoUser, err := authPassword(config)
 		if err != nil {
 			exitError(err)
 			return
@@ -110,64 +92,13 @@ func main() {
 	}
 }
 
-func authPublicKeyFake(config *commons.Config) (*types.SFTPGoUser, error) {
-	err := config.ValidateForPublicKeyAuth()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Infof("Authenticated user %q using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
-
-	// return the authenticated user
-	mountPaths := []types.MountPath{}
-
-	sftpgoUsername := config.SFTPGoAuthdUsername
-
-	mountPaths = append(mountPaths, makeMountPathForHome(config))
-
-	//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
-
-	if config.HasSharedDir() {
-		mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
-	}
-
-	sftpGoUser, err := auth.MakeSFTPGoUser(config, sftpgoUsername, mountPaths)
-	if err != nil {
-		return nil, err
-	}
-
-	return sftpGoUser, nil
-}
-
-func authPasswordFake(config *commons.Config) (*types.SFTPGoUser, error) {
-	if config.IsAnonymousUser() {
-		// overwrite existing account info to ensure correct spell/case and empty password
-		config.SFTPGoAuthdUsername = "anonymous"
-		config.SFTPGoAuthdPassword = "" // empty password
-	}
-
-	log.Infof("Authenticated user %q using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
-
-	mountPaths := []types.MountPath{}
-	if !config.IsAnonymousUser() {
-		// anonymous user doesn't have home dir
-		// so do this only if user is not anonymous
-		mountPaths = append(mountPaths, makeMountPathForHome(config))
-
-		//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
-	}
-
-	if config.HasSharedDir() {
-		mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
-	}
-
-	sftpGoUser, err := auth.MakeSFTPGoUser(config, config.SFTPGoAuthdUsername, mountPaths)
-	if err != nil {
-		return nil, err
-	}
-
-	return sftpGoUser, nil
-}
+// The iRODS operations are referenced through variables so that tests can
+// exercise the SFTPGoUser generation without reaching an iRODS server.
+var (
+	authViaPassword  = auth.AuthViaPassword
+	authViaPublicKey = auth.AuthViaPublicKey
+	createSshDir     = auth.CreateSshDir
+)
 
 func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 	err := config.ValidateForPublicKeyAuth()
@@ -175,7 +106,7 @@ func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 		return nil, err
 	}
 
-	loggedIn, options, err := auth.AuthViaPublicKey(config)
+	loggedIn, options, err := authViaPublicKey(config)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +170,7 @@ func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
 		config.SFTPGoAuthdPassword = "" // empty password
 	}
 
-	loggedIn, err := auth.AuthViaPassword(config)
+	loggedIn, err := authViaPassword(config)
 	if err != nil {
 		log.WithError(err).Errorf("Authenticated failed for user %q using password", config.SFTPGoAuthdUsername)
 		return nil, err
@@ -250,7 +181,7 @@ func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
 
 		// create .ssh dir
 		if !config.IsAnonymousUser() {
-			err := auth.CreateSshDir(config)
+			err := createSshDir(config)
 			if err != nil {
 				return nil, err
 			}

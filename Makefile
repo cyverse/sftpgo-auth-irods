@@ -14,6 +14,10 @@ build:
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux go build -ldflags=${LDFLAGS} -o bin/sftpgo-auth-irods ./cmd/
 
+.PHONY: test
+test:
+	go test ./...
+
 .PHONY: release
 release: build
 	mkdir -p release
