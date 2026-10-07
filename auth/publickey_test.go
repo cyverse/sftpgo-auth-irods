@@ -602,6 +602,34 @@ func TestGetHomeCollectionPathMatchesDefault(t *testing.T) {
 	}
 }
 
+// TestHomePathsAgree pins the invariant the public key flow depends on: the
+// default this package derives and the one the configuration reports have to be
+// the same string, because cmd compares them to decide whether a key needs its
+// own SFTPGo user. The .ssh path has to sit under the same home.
+func TestHomePathsAgree(t *testing.T) {
+	configs := []*commons.Config{
+		testConfig(),
+		{IRODSZone: "otherZone", SFTPGoAuthdUsername: "someone"},
+		{IRODSZone: "z", SFTPGoAuthdUsername: "u"},
+	}
+
+	for _, config := range configs {
+		t.Run(config.IRODSZone+"/"+config.SFTPGoAuthdUsername, func(t *testing.T) {
+			home := config.GetHomeDirPath()
+
+			if got := GetHomeCollectionPath(config, nil); got != home {
+				t.Errorf("GetHomeCollectionPath() = %q, want the configured home %q", got, home)
+			}
+			if got, want := makeSSHPath(config), home+"/.ssh"; got != want {
+				t.Errorf("makeSSHPath() = %q, want %q", got, want)
+			}
+			if got, want := makeSSHAuthorizedKeysPath(config), home+"/.ssh/authorized_keys"; got != want {
+				t.Errorf("makeSSHAuthorizedKeysPath() = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

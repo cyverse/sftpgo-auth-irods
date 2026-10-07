@@ -3,7 +3,6 @@ package auth
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"net"
 	"path"
 	"regexp"
@@ -185,9 +184,12 @@ func wildCardToRegexp(pattern string) string {
 	return regexString + "$"
 }
 
-// GetHomeCollectionPath returns home collection path
+// GetHomeCollectionPath returns the home collection path a key is confined to,
+// which is the user's home unless a home= option names another collection. The
+// caller compares the result against commons.Config.GetHomeDirPath, so the
+// default has to come from there rather than be spelled out again here.
 func GetHomeCollectionPath(config *commons.Config, options []string) string {
-	userHome := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
+	userHome := config.GetHomeDirPath()
 
 	for _, option := range options {
 		optKV := strings.SplitN(option, "=", 2)

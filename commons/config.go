@@ -255,7 +255,10 @@ func (config *Config) HasSFTPGoAPI() bool {
 	return len(config.SFTPGoAPIBaseURL) > 0 && len(config.SFTPGoAPIKey) > 0
 }
 
-// GetSharedDirName returns shared dir's name
+// GetHomeDirPath returns the user's iRODS home collection path, or an empty
+// string for the anonymous user, who has no home collection. This is the only
+// place the home path is spelled out, because the public key flow compares the
+// path it derives from a home= option against this one.
 func (config *Config) GetHomeDirPath() string {
 	if config.IsAnonymousUser() {
 		return ""

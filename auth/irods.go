@@ -2,7 +2,6 @@ package auth
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"path"
 	"strings"
@@ -24,13 +23,11 @@ const (
 	authRequestTimeout    time.Duration = 30 * time.Second
 )
 
-func makeIRODSHomePath(config *commons.Config) string {
-	return fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
-}
-
+// makeSSHPath returns the user's .ssh collection path. Only the public key flow
+// and CreateSshDir reach this, and neither runs for the anonymous user, who has
+// no home collection.
 func makeSSHPath(config *commons.Config) string {
-	homePath := makeIRODSHomePath(config)
-	return path.Join(homePath, ".ssh")
+	return path.Join(config.GetHomeDirPath(), ".ssh")
 }
 
 func makeSSHAuthorizedKeysPath(config *commons.Config) string {
