@@ -21,6 +21,12 @@ const (
 	authorizedKeyFilename string        = "authorized_keys"
 	applicationName       string        = "sftpgo-auth-irods"
 	authRequestTimeout    time.Duration = 30 * time.Second
+
+	// maxAuthorizedKeysSize bounds how much of authorized_keys is read into
+	// memory. A key line stays well under a kilobyte, so this holds far more
+	// keys than a user would register while keeping an object of any size from
+	// being buffered by the auth hook.
+	maxAuthorizedKeysSize int64 = 1024 * 1024
 )
 
 // makeSSHPath returns the user's .ssh collection path. Only the public key flow
@@ -264,22 +270,58 @@ func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IROD
 
 	defer irodsclient_fs.CloseDataObject(irodsConn, fileHandle)
 
-	var authorizedKeysBuffer bytes.Buffer
+	authorizedKeys, truncated, err := readAllLimited(func(buffer []byte) (int, error) {
+		return irodsclient_fs.ReadDataObject(irodsConn, fileHandle, buffer)
+	}, maxAuthorizedKeysSize)
+	if err != nil {
+		log.Debugf("failed to read .ssh/authorized_keys file %q", sshAuthorizedKeysPath)
+		return nil, errors.Wrapf(err, "failed to read .ssh/authorized_keys file %q", sshAuthorizedKeysPath)
+	}
+
+	if truncated {
+		log.Warnf("read only the first %d bytes of .ssh/authorized_keys file %q, which holds %d bytes; keys past that point are ignored",
+			maxAuthorizedKeysSize, sshAuthorizedKeysPath, sshAuthorizedKeysDataObject.Size)
+	}
+
+	return authorizedKeys, nil
+}
+
+// readAllLimited reads until EOF and returns what it read, failing once more
+// readAllLimited reads at most limit bytes and reports whether the object held
+// more than that. Reading only a bounded prefix keeps the auth hook from
+// buffering an object of any size; the caller checks the keys it did get.
+func readAllLimited(read func([]byte) (int, error), limit int64) ([]byte, bool, error) {
+	var buffer bytes.Buffer
 	readBuffer := make([]byte, 64*1024)
-	for {
-		readLen, err := irodsclient_fs.ReadDataObject(irodsConn, fileHandle, readBuffer)
+
+	// read one round past the limit, so that an object of exactly limit bytes
+	// is not reported as truncated
+	for int64(buffer.Len()) <= limit {
+		readLen, err := read(readBuffer)
 		if err != nil && err != io.EOF {
-			log.Debugf("failed to read .ssh/authorized_keys file %q", sshAuthorizedKeysPath)
-			return nil, err
+			return nil, false, err
 		}
 
-		authorizedKeysBuffer.Write(readBuffer[:readLen])
+		buffer.Write(readBuffer[:readLen])
+
 		if err == io.EOF {
 			break
 		}
+
+		if readLen == 0 {
+			// no data and no EOF, so reading again would not make progress.
+			// Returning what was read so far would look like a shorter
+			// authorized_keys rather than a failure
+			return nil, false, errors.New("read returned no data before the end of the object")
+		}
 	}
 
-	return authorizedKeysBuffer.Bytes(), nil
+	if int64(buffer.Len()) > limit {
+		// a key line cut in half parses as an invalid line and is skipped
+		return buffer.Bytes()[:limit], true, nil
+	}
+
+	return buffer.Bytes(), false, nil
 }
 
 func CreateSshDir(config *commons.Config) error {
