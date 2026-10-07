@@ -190,7 +190,13 @@ func GetHomeCollectionPath(config *commons.Config, options []string) string {
 			optK := strings.TrimSpace(optKV[0])
 			if strings.ToLower(optK) == "home" {
 				optV := strings.TrimSpace(optKV[1])
-				optV = strings.Trim(optV, "\"")
+				optV = strings.TrimSpace(strings.Trim(optV, "\""))
+
+				if len(optV) == 0 {
+					// no path given, fall back to the default home
+					log.Debugf("ignoring empty home option '%s'", option)
+					continue
+				}
 
 				if optV[0] == '/' {
 					// absolute
