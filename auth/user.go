@@ -32,10 +32,13 @@ func makePermissions(mountPaths []types.MountPath) map[string][]string {
 	return permissions
 }
 
-func makeFilters() *types.SFTPGoUserFilter {
+func makeFilters(config *commons.Config) *types.SFTPGoUserFilter {
 	return &types.SFTPGoUserFilter{
 		AllowedIP:          []string{},
 		DeniedLoginMethods: []string{},
+		// let SFTPGo reuse this result instead of calling the hook, and us
+		// iRODS, again for every login
+		ExternalAuthCacheTime: config.SFTPGoAuthCacheTime,
 	}
 }
 
@@ -136,7 +139,7 @@ func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []
 		HomeDir:        makeLocalUserPath(config, sftpgoUsername),
 		VirtualFolders: vfolders,
 		Permissions:    makePermissions(mountPaths),
-		Filters:        makeFilters(),
+		Filters:        makeFilters(config),
 		FileSystem:     makeLocalFileSystem(),
 	}, nil
 }

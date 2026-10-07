@@ -14,6 +14,7 @@ const (
 	defaultIRODSAuthScheme string = "native"
 	defaultLogDir          string = "/tmp"
 	defaultHomeDir         string = "/srv/sftpgo/data"
+	defaultAuthCacheTime   int64  = 300
 
 	// client-server negotiation policies accepted by go-irodsclient
 	csNegotiationPolicyRefuse   string = "CS_NEG_REFUSE"
@@ -64,6 +65,12 @@ type Config struct {
 	SFTPGoAuthdPublickey string `envconfig:"SFTPGO_AUTHD_PUBLIC_KEY"`
 	SFTPGoAuthdIP        string `envconfig:"SFTPGO_AUTHD_IP"`
 
+	// SFTPGoAuthCacheTime is how long, in seconds, SFTPGo may reuse the result
+	// of a successful authentication before calling this hook again. 0 falls
+	// back to defaultAuthCacheTime. A revoked password or public key keeps
+	// working for up to this long, so the default is deliberately short.
+	SFTPGoAuthCacheTime int64 `envconfig:"SFTPGO_AUTH_CACHE_TIME"`
+
 	// for Logging
 	SFTPGoLogDir string `envconfig:"SFTPGO_LOG_DIR"`
 
@@ -89,6 +96,10 @@ func ReadFromEnv() (*Config, error) {
 
 	if len(config.IRODSAuthScheme) == 0 {
 		config.IRODSAuthScheme = defaultIRODSAuthScheme
+	}
+
+	if config.SFTPGoAuthCacheTime == 0 {
+		config.SFTPGoAuthCacheTime = defaultAuthCacheTime
 	}
 
 	// normalize so that every comparison against the policy agrees
@@ -201,6 +212,9 @@ func (config *Config) Validate() error {
 	}
 	if len(config.SFTPGoAuthdIP) == 0 {
 		return errors.New("ip address is not given")
+	}
+	if config.SFTPGoAuthCacheTime < 0 {
+		return errors.New("auth cache time must not be negative")
 	}
 	if len(config.SFTPGoLogDir) == 0 {
 		return errors.New("log dir is not given")

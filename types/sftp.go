@@ -12,8 +12,9 @@ const (
 
 // SFTPGoUser is a user filter data type for SFTPGo
 type SFTPGoUserFilter struct {
-	AllowedIP          []string `json:"allowed_ip,omitempty"`
-	DeniedLoginMethods []string `json:"denied_login_methods,omitempty"`
+	AllowedIP             []string `json:"allowed_ip,omitempty"`
+	DeniedLoginMethods    []string `json:"denied_login_methods,omitempty"`
+	ExternalAuthCacheTime int64    `json:"external_auth_cache_time,omitempty"`
 }
 
 // SFTPGoSecret is a secret data type for SFTPGo

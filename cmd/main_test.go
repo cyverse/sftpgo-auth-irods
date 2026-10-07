@@ -78,6 +78,7 @@ var configEnvKeys = []string{
 	"SFTPGO_AUTHD_PASSWORD",
 	"SFTPGO_AUTHD_PUBLIC_KEY",
 	"SFTPGO_AUTHD_IP",
+	"SFTPGO_AUTH_CACHE_TIME",
 	"SFTPGO_LOG_DIR",
 	"SFTPGO_API_BASE_URL",
 	"SFTPGO_API_KEY",
@@ -679,6 +680,63 @@ func TestVirtualFoldersAreDistinct(t *testing.T) {
 	}
 }
 
+// TestAuthCacheTime checks the external_auth_cache_time handed to SFTPGo, which
+// is what lets SFTPGo reuse a successful authentication instead of calling this
+// hook, and iRODS, again for every login.
+func TestAuthCacheTime(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		set   bool
+		want  int64
+	}{
+		{name: "defaults to five minutes", want: 300},
+		{name: "explicitly set", value: "60", set: true, want: 60},
+		{name: "zero falls back to the default", value: "0", set: true, want: 300},
+		{name: "explicitly set to the default", value: "300", set: true, want: 300},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			env := baseEnv()
+			env["SFTPGO_AUTHD_PASSWORD"] = testUserPassword
+			if test.set {
+				env["SFTPGO_AUTH_CACHE_TIME"] = test.value
+			}
+
+			config := readConfig(t, env)
+			stubAuth(t, true, nil, nil)
+
+			user, err := authPassword(config)
+			if err != nil {
+				t.Fatalf("authPassword() failed: %v", err)
+			}
+
+			if got := user.Filters.ExternalAuthCacheTime; got != test.want {
+				t.Errorf("external auth cache time = %d, want %d", got, test.want)
+			}
+
+			// the value only takes effect if it survives into the response
+			response, err := json.Marshal(user)
+			if err != nil {
+				t.Fatalf("failed to marshal the user: %v", err)
+			}
+
+			var decoded struct {
+				Filters struct {
+					ExternalAuthCacheTime int64 `json:"external_auth_cache_time"`
+				} `json:"filters"`
+			}
+			if err := json.Unmarshal(response, &decoded); err != nil {
+				t.Fatalf("failed to decode the response: %v", err)
+			}
+			if got := decoded.Filters.ExternalAuthCacheTime; got != test.want {
+				t.Errorf("external auth cache time in the response = %d, want %d", got, test.want)
+			}
+		})
+	}
+}
+
 // TestRedactedJSONHidesPassword checks that the logged representation does not
 // carry the password, while the response sent to SFTPGo still does.
 func TestRedactedJSONHidesPassword(t *testing.T) {
@@ -892,6 +950,16 @@ func TestConfigValidation(t *testing.T) {
 				return env
 			}(),
 			wantErr: "must be one of none, cert or hostname",
+		},
+		{
+			name: "negative auth cache time",
+			env: func() map[string]string {
+				env := baseEnv()
+				env["SFTPGO_AUTHD_PASSWORD"] = testUserPassword
+				env["SFTPGO_AUTH_CACHE_TIME"] = "-1"
+				return env
+			}(),
+			wantErr: "auth cache time must not be negative",
 		},
 		{
 			name: "api base url without key",
