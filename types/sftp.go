@@ -44,8 +44,12 @@ type SFTPGoIRODSFsConfig struct {
 	SSLHashRounds                  int           `json:"ssl_hash_rounds,omitempty"`
 }
 
-// GetRedacted returns a redacted SFTPGoIRODSFsConfig
+// GetRedacted returns a redacted SFTPGoIRODSFsConfig, or nil for a nil config
 func (config *SFTPGoIRODSFsConfig) GetRedacted() *SFTPGoIRODSFsConfig {
+	if config == nil {
+		return nil
+	}
+
 	newConfig := *config
 	if newConfig.Password != nil && len(newConfig.Password.Payload) > 0 {
 		newConfig.Password = &SFTPGoSecret{
@@ -65,12 +69,14 @@ type SFTPGoFileSystem struct {
 	IRODSConfig *SFTPGoIRODSFsConfig   `json:"irodsconfig"`
 }
 
-// GetRedacted returns a redacted SFTPGoFileSystem
+// GetRedacted returns a redacted SFTPGoFileSystem, or nil for a nil filesystem
 func (fs *SFTPGoFileSystem) GetRedacted() *SFTPGoFileSystem {
-	newFs := *fs
-	if newFs.IRODSConfig != nil {
-		newFs.IRODSConfig = newFs.IRODSConfig.GetRedacted()
+	if fs == nil {
+		return nil
 	}
+
+	newFs := *fs
+	newFs.IRODSConfig = newFs.IRODSConfig.GetRedacted()
 	return &newFs
 }
 
@@ -101,8 +107,14 @@ type SFTPGoUser struct {
 	FileSystem     *SFTPGoFileSystem     `json:"filesystem"`
 }
 
-// GetRedacted returns a redacted SFTPGoUser
+// GetRedacted returns a redacted SFTPGoUser, or nil for a nil user. The
+// original is left untouched, because the caller logs the redacted copy and
+// still sends the original to SFTPGo.
 func (user *SFTPGoUser) GetRedacted() *SFTPGoUser {
+	if user == nil {
+		return nil
+	}
+
 	newUser := *user
 
 	if len(newUser.VirtualFolders) > 0 {
@@ -114,9 +126,7 @@ func (user *SFTPGoUser) GetRedacted() *SFTPGoUser {
 		newUser.VirtualFolders = newVFolders
 	}
 
-	if newUser.FileSystem != nil {
-		newUser.FileSystem = newUser.FileSystem.GetRedacted()
-	}
+	newUser.FileSystem = newUser.FileSystem.GetRedacted()
 	return &newUser
 }
 
