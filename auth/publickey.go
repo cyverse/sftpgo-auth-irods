@@ -29,7 +29,7 @@ func checkAuthorizedKey(authorizedKeys []byte, userKey ssh.PublicKey) (bool, []s
 		authorizedKey, _, options, _, err := ssh.ParseAuthorizedKey([]byte(authorizedKeyLine))
 		if err != nil {
 			// skip invalid public key
-			log.Debugf("failed to parse a authorized key line - %s", err.Error())
+			log.WithError(err).Debugf("failed to parse a authorized key line")
 			continue
 		}
 
@@ -78,7 +78,7 @@ func IsKeyExpired(options []string) bool {
 
 				expiryDate, err := parseExpiryTime(optV)
 				if err != nil {
-					log.Debugf("failed to parse expiry date '%s'", optV)
+					log.Debugf("failed to parse expiry date %q", optV)
 					return true
 				}
 
@@ -116,7 +116,7 @@ func IsClientRejected(clientIP string, options []string) bool {
 							// negated - check rejected
 							if matchIP(clientIP, ipFilter[1:]) {
 								// reject if it matches
-								log.Debugf("client %s is rejected because it matches to %s", clientIP, ipFilter)
+								log.Debugf("client %q is rejected because it matches to %q", clientIP, ipFilter)
 								return true
 							}
 						} else {
@@ -191,7 +191,7 @@ func GetHomeCollectionPath(config *commons.Config, options []string) string {
 
 				if len(optV) == 0 {
 					// no path given, fall back to the default home
-					log.Debugf("ignoring empty home option '%s'", option)
+					log.Debugf("ignoring empty home option %q", option)
 					continue
 				}
 

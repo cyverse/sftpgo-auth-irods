@@ -3,6 +3,7 @@ module github.com/cyverse/sftpgo-auth-irods
 go 1.25.8
 
 require (
+	github.com/cockroachdb/errors v1.12.0
 	github.com/cyverse/go-irodsclient v0.20.0
 	github.com/gliderlabs/ssh v0.3.3
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -14,7 +15,6 @@ require (
 
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
-	github.com/cockroachdb/errors v1.12.0 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect

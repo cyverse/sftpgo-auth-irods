@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
 	"github.com/sftpgo/sdk"
@@ -86,7 +87,7 @@ func makeVirtualFolders(config *commons.Config, sftpgoUsername string, mountPath
 	for _, mountPath := range mountPaths {
 		if _, ok := reservedNames[mountPath.Name]; ok {
 			// already reserved name
-			return nil, fmt.Errorf("duplicated virtual folder name %s", mountPath.Name)
+			return nil, errors.Errorf("duplicated virtual folder name %q", mountPath.Name)
 		}
 
 		vfolder := types.SFTPGoVirtualFolder{
@@ -113,7 +114,7 @@ func MakeSFTPGoUser(config *commons.Config, sftpgoUsername string, mountPaths []
 
 	if config.HasSFTPGoAPI() {
 		if err := EnsureVirtualFolders(config, vfolders); err != nil {
-			return nil, fmt.Errorf("failed to ensure virtual folders in SFTPGo: %w", err)
+			return nil, errors.Wrap(err, "failed to ensure virtual folders in SFTPGo")
 		}
 	}
 

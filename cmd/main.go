@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/cyverse/sftpgo-auth-irods/auth"
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
@@ -115,7 +116,7 @@ func authPublicKeyFake(config *commons.Config) (*types.SFTPGoUser, error) {
 		return nil, err
 	}
 
-	log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+	log.Infof("Authenticated user %q using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 	// return the authenticated user
 	mountPaths := []types.MountPath{}
@@ -145,7 +146,7 @@ func authPasswordFake(config *commons.Config) (*types.SFTPGoUser, error) {
 		config.SFTPGoAuthdPassword = "" // empty password
 	}
 
-	log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+	log.Infof("Authenticated user %q using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 	mountPaths := []types.MountPath{}
 	if !config.IsAnonymousUser() {
@@ -180,7 +181,7 @@ func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 	}
 
 	if loggedIn {
-		log.Infof("Authenticated user '%s' using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+		log.Infof("Authenticated user %q using public key, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 		// must have .ssh dir to reach here!
 		// create .ssh dir
@@ -228,7 +229,7 @@ func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 		return sftpGoUser, nil
 	}
 
-	return nil, fmt.Errorf("unable to auth the user %s", config.SFTPGoAuthdUsername)
+	return nil, errors.Errorf("unable to auth the user %q", config.SFTPGoAuthdUsername)
 }
 
 func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
@@ -240,12 +241,12 @@ func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
 
 	loggedIn, err := auth.AuthViaPassword(config)
 	if err != nil {
-		log.WithError(err).Errorf("Authenticated failed for user '%s' using password", config.SFTPGoAuthdUsername)
+		log.WithError(err).Errorf("Authenticated failed for user %q using password", config.SFTPGoAuthdUsername)
 		return nil, err
 	}
 
 	if loggedIn {
-		log.Infof("Authenticated user '%s' using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
+		log.Infof("Authenticated user %q using password, creating a SFTPGoUser", config.SFTPGoAuthdUsername)
 
 		// create .ssh dir
 		if !config.IsAnonymousUser() {
@@ -276,7 +277,7 @@ func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
 		return sftpGoUser, nil
 	}
 
-	return nil, fmt.Errorf("unable to auth the user %s", config.SFTPGoAuthdUsername)
+	return nil, errors.Errorf("unable to auth the user %q", config.SFTPGoAuthdUsername)
 }
 
 func makeMountPathForHome(config *commons.Config) types.MountPath {
@@ -339,7 +340,7 @@ func exitError(err error) {
 
 func printSuccessResponse(sftpGoUser *types.SFTPGoUser) {
 	redactedJSONString := sftpGoUser.GetRedactedJSONString()
-	log.Infof("Authenticated user '%s': %s", sftpGoUser.Username, redactedJSONString)
+	log.Infof("Authenticated user %q: %s", sftpGoUser.Username, redactedJSONString)
 
 	resp, _ := json.Marshal(sftpGoUser)
 	fmt.Printf("%v\n", string(resp))

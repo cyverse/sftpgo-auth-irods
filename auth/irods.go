@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/gliderlabs/ssh"
 
@@ -56,8 +57,8 @@ func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, 
 			return nil, err
 		}
 	default:
-		log.Debugf("unknown authentication scheme %s", config.IRODSAuthScheme)
-		return nil, fmt.Errorf("unknown authentication scheme %s", config.IRODSAuthScheme)
+		log.Debugf("unknown authentication scheme %q", config.IRODSAuthScheme)
+		return nil, errors.Errorf("unknown authentication scheme %q", config.IRODSAuthScheme)
 	}
 
 	// SSL
@@ -110,13 +111,13 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("unknown authentication scheme %s", config.IRODSAuthScheme)
+		return nil, errors.Errorf("unknown authentication scheme %q", config.IRODSAuthScheme)
 	}
 
 	if config.IRODSRequireCSNegotiation {
 		require := irodsclient_types.GetCSNegotiationPolicyRequest(config.IRODSCSNegotiationPolicy)
 		if err != nil {
-			log.Debugf("failed to create iRODS client-server negotiation policy from string '%s'", config.IRODSCSNegotiationPolicy)
+			log.Debugf("failed to create iRODS client-server negotiation policy from string %q", config.IRODSCSNegotiationPolicy)
 			return nil, err
 		}
 
@@ -166,11 +167,11 @@ func AuthViaPassword(config *commons.Config) (bool, error) {
 
 // AuthViaPublicKey authenticate a user via public key
 func AuthViaPublicKey(config *commons.Config) (bool, []string, error) {
-	log.Debugf("authenticating a user '%s'", config.SFTPGoAuthdUsername)
+	log.Debugf("authenticating a user %q", config.SFTPGoAuthdUsername)
 
 	userKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(config.SFTPGoAuthdPublickey))
 	if err != nil {
-		log.Debugf("failed to parse public-key for a user '%s'", config.SFTPGoAuthdUsername)
+		log.Debugf("failed to parse public-key for a user %q", config.SFTPGoAuthdUsername)
 		return false, nil, err
 	}
 
@@ -206,22 +207,22 @@ func AuthViaPublicKey(config *commons.Config) (bool, []string, error) {
 		log.Debugf("checking options - %v", options)
 		// expiry
 		if IsKeyExpired(options) {
-			return false, options, fmt.Errorf("public key access for the user '%s' is expired", config.SFTPGoAuthdUsername)
+			return false, options, errors.Errorf("public key access for the user %q is expired", config.SFTPGoAuthdUsername)
 		}
 
 		// reject by client whilte-list
 		if IsClientRejected(config.SFTPGoAuthdIP, options) {
-			return false, options, fmt.Errorf("public key access for the user '%s' is rejected", config.SFTPGoAuthdUsername)
+			return false, options, errors.Errorf("public key access for the user %q is rejected", config.SFTPGoAuthdUsername)
 		}
 
 		// auth success
-		log.Debugf("authenticated a user '%s'", config.SFTPGoAuthdUsername)
+		log.Debugf("authenticated a user %q", config.SFTPGoAuthdUsername)
 		return true, options, nil
 	}
 
 	// auth fail
-	log.Debugf("unable to authenticate the user '%s' using a public key", config.SFTPGoAuthdUsername)
-	return false, nil, fmt.Errorf("unable to find matching authorized public key for the user '%s'", config.SFTPGoAuthdUsername)
+	log.Debugf("unable to authenticate the user %q using a public key", config.SFTPGoAuthdUsername)
+	return false, nil, errors.Errorf("unable to find matching authorized public key for the user %q", config.SFTPGoAuthdUsername)
 }
 
 // readAuthorizedKeys returns content of authorized_keys
@@ -229,37 +230,37 @@ func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IROD
 	// check .ssh dir
 	sshPath := makeSSHPath(config)
 
-	log.Debugf("checking .ssh dir '%s'", sshPath)
+	log.Debugf("checking .ssh dir %q", sshPath)
 	sshCollection, err := irodsclient_fs.GetCollection(irodsConn, sshPath)
 	if err != nil {
-		log.Debugf(".ssh dir not exist'%s'", sshPath)
+		log.Debugf(".ssh dir %q not exist", sshPath)
 		return nil, err
 	}
 
 	if sshCollection.ID <= 0 {
 		// collection not exist
-		log.Debugf(".ssh dir not exist'%s'", sshPath)
-		return nil, err
+		log.Debugf(".ssh dir %q not exist", sshPath)
+		return nil, errors.Errorf(".ssh dir %q does not exist", sshPath)
 	}
 
 	// get .ssh/authorized_keys file
 	sshAuthorizedKeysPath := makeSSHAuthorizedKeysPath(config)
-	log.Debugf("checking .ssh/authorized_keys file '%s'", sshAuthorizedKeysPath)
+	log.Debugf("checking .ssh/authorized_keys file %q", sshAuthorizedKeysPath)
 	sshAuthorizedKeysDataObject, err := irodsclient_fs.GetDataObjectMasterReplica(irodsConn, sshAuthorizedKeysPath)
 	if err != nil {
-		log.Debugf(".ssh/authorized_keys file not exist '%s'", sshAuthorizedKeysPath)
+		log.Debugf(".ssh/authorized_keys file not exist %q", sshAuthorizedKeysPath)
 		return nil, err
 	}
 
 	if sshAuthorizedKeysDataObject.ID <= 0 {
 		// authorized keys not exist
-		log.Debugf(".ssh/authorized_keys file not exist '%s'", sshAuthorizedKeysPath)
-		return nil, err
+		log.Debugf(".ssh/authorized_keys file not exist %q", sshAuthorizedKeysPath)
+		return nil, errors.Errorf(".ssh/authorized_keys file %q does not exist", sshAuthorizedKeysPath)
 	}
 
 	fileHandle, _, err := irodsclient_fs.OpenDataObject(irodsConn, sshAuthorizedKeysPath, "", "r", nil)
 	if err != nil {
-		log.Debugf("failed to open .ssh/authorized_keys file '%s'", sshAuthorizedKeysPath)
+		log.Debugf("failed to open .ssh/authorized_keys file %q", sshAuthorizedKeysPath)
 		return nil, err
 	}
 
@@ -270,7 +271,7 @@ func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IROD
 	for {
 		readLen, err := irodsclient_fs.ReadDataObject(irodsConn, fileHandle, readBuffer)
 		if err != nil && err != io.EOF {
-			log.Debugf("failed to read .ssh/authorized_keys file '%s'", sshAuthorizedKeysPath)
+			log.Debugf("failed to read .ssh/authorized_keys file %q", sshAuthorizedKeysPath)
 			return nil, err
 		}
 
@@ -286,7 +287,7 @@ func readAuthorizedKeys(config *commons.Config, irodsConn *irodsclient_conn.IROD
 func CreateSshDir(config *commons.Config) error {
 	sshPath := makeSSHPath(config)
 
-	log.Debugf("creating .ssh dir '%s'", sshPath)
+	log.Debugf("creating .ssh dir %q", sshPath)
 
 	var irodsAccount *irodsclient_types.IRODSAccount
 	var err error

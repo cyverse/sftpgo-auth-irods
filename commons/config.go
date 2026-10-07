@@ -1,11 +1,11 @@
 package commons
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/kelseyhightower/envconfig"
 )
 
