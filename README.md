@@ -211,20 +211,75 @@ command's path:
 SFTPGo gives the hook 30 seconds, which is also the timeout this program uses for
 its iRODS connections and REST API calls.
 
+Note that SFTPGo clears the environment a hook inherits, so this `env` list is
+the whole environment the hook runs with. A variable set on the SFTPGo process,
+or on its container, does not reach the hook unless it is listed here.
+
 [cyverse/sftpgo-deploy](https://github.com/cyverse/sftpgo-deploy) builds this
 configuration from a template; see `sftpgo/scripts/sftpgo.json.template` there
-for a complete example.
+for a complete example. It fills the list from `config.inc` at image build time,
+and its entrypoint injects `SFTPGO_API_BASE_URL` and `SFTPGO_API_KEY` at
+startup, after issuing an API key against the admin UI it just started.
 
-That template leaves out the variables the hook has a usable default for, or
-that are off unless configured. Add them to the same `env` list to use them:
+### Registering virtual folders through the REST API
+
+To have the hook create each virtual folder before it answers, give it an API
+key. The key only exists once SFTPGo is running, so this is a two-pass setup:
+start SFTPGo, create the key, add it to the configuration, restart.
+
+**1. Create an API key.** Log in to the web admin UI as an administrator and
+create one. SFTPGo shows it only at creation and keeps a hash afterwards, so copy
+it then; if it is lost, create another. The same thing over the REST API:
+
+```bash
+token=$(curl -s -u admin:password http://127.0.0.1:8022/api/v2/token | jq -r .access_token)
+curl -s -X POST http://127.0.0.1:8022/api/v2/apikeys \
+  -H "Authorization: Bearer ${token}" \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "sftpgo-auth-irods", "scope": 1, "admin": "admin"}' | jq -r .key
+```
+
+An admin can only be used this way once `allow_api_key_auth` is set on it.
+
+**2. Add both variables to the hook's `env`**, alongside the iRODS ones. The base
+URL is the admin UI port, since the REST API shares that binding:
 
 ```json
-"SFTPGO_LOG_DIR=/var/log/sftpgo",
-"SFTPGO_AUTH_CACHE_TIME=300",
-"IRODS_SSL_VERIFY_SERVER=hostname",
-"SFTPGO_API_BASE_URL=http://127.0.0.1:8022",
-"SFTPGO_API_KEY=the-key-from-the-admin-ui"
+{
+  "command": {
+    "commands": [
+      {
+        "path": "/usr/local/bin/sftpgo-auth-irods",
+        "timeout": 30,
+        "env": [
+          "IRODS_HOST=data.cyverse.org",
+          "IRODS_ZONE=iplant",
+          "SFTPGO_API_BASE_URL=http://127.0.0.1:8022",
+          "SFTPGO_API_KEY=the-key-copied-from-the-admin-ui"
+        ],
+        "args": [],
+        "hook": ""
+      }
+    ]
+  }
+}
 ```
+
+Set both or neither: the hook refuses a configuration with only one of them.
+
+**3. Restart SFTPGo.** `sftpgo.json` is read at startup, so the hook keeps
+running with the old `env` until the service comes back:
+
+```bash
+sudo systemctl restart sftpgo
+```
+
+Under Docker, restart the container instead — in `sftpgo-deploy` that is
+`./controller stop && ./controller start`, though there the entrypoint does all
+of the above for you.
+
+To confirm it worked, log in once and look for the folders in the admin UI, or
+check the hook's log for a `POST /api/v2/folders` failure.
 
 ## Building
 
