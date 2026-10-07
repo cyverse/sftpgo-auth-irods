@@ -116,11 +116,6 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 
 	if config.IRODSRequireCSNegotiation {
 		require := irodsclient_types.GetCSNegotiationPolicyRequest(config.IRODSCSNegotiationPolicy)
-		if err != nil {
-			log.Debugf("failed to create iRODS client-server negotiation policy from string %q", config.IRODSCSNegotiationPolicy)
-			return nil, err
-		}
-
 		irodsAccount.SetCSNegotiation(true, require)
 
 		if require == irodsclient_types.CSNegotiationPolicyRequestSSL || len(config.IRODSSSLCACertificatePath) > 0 {

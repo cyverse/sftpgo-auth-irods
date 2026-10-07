@@ -14,6 +14,11 @@ const (
 	defaultIRODSAuthScheme string = "native"
 	defaultLogDir          string = "/tmp"
 	defaultHomeDir         string = "/srv/sftpgo/data"
+
+	// client-server negotiation policies accepted by go-irodsclient
+	csNegotiationPolicyRefuse   string = "CS_NEG_REFUSE"
+	csNegotiationPolicyRequire  string = "CS_NEG_REQUIRE"
+	csNegotiationPolicyDontCare string = "CS_NEG_DONT_CARE"
 )
 
 // Config is a configuration struct
@@ -76,8 +81,10 @@ func ReadFromEnv() (*Config, error) {
 		config.IRODSAuthScheme = defaultIRODSAuthScheme
 	}
 
+	// normalize so that every comparison against the policy agrees
+	config.IRODSCSNegotiationPolicy = strings.ToUpper(strings.TrimSpace(config.IRODSCSNegotiationPolicy))
 	if len(config.IRODSCSNegotiationPolicy) == 0 {
-		config.IRODSCSNegotiationPolicy = "CS_NEG_DONT_CARE"
+		config.IRODSCSNegotiationPolicy = csNegotiationPolicyDontCare
 	}
 
 	if len(config.SFTPGoLogDir) == 0 {
@@ -110,7 +117,16 @@ func (config *Config) Validate() error {
 			return errors.New("iRODS client-server negotiation policy is not given")
 		}
 
-		if strings.ToLower(config.IRODSCSNegotiationPolicy) == "cs_neg_require" {
+		// an unrecognized policy silently falls back to a plain TCP connection,
+		// so reject it instead of letting it downgrade the connection
+		switch strings.ToUpper(config.IRODSCSNegotiationPolicy) {
+		case csNegotiationPolicyRefuse, csNegotiationPolicyRequire, csNegotiationPolicyDontCare:
+		default:
+			return errors.Errorf("iRODS client-server negotiation policy %q must be one of %s, %s or %s",
+				config.IRODSCSNegotiationPolicy, csNegotiationPolicyRefuse, csNegotiationPolicyRequire, csNegotiationPolicyDontCare)
+		}
+
+		if strings.ToUpper(config.IRODSCSNegotiationPolicy) == csNegotiationPolicyRequire {
 			// SSL
 			if len(config.IRODSSSLCACertificatePath) == 0 {
 				return errors.New("iRODS SSL CA certificate path is not given")
