@@ -69,7 +69,7 @@ func parseExpiryTime(timespec string) (time.Time, error) {
 
 func IsKeyExpired(options []string) bool {
 	for _, option := range options {
-		optKV := strings.Split(option, "=")
+		optKV := strings.SplitN(option, "=", 2)
 		if len(optKV) == 2 {
 			optK := strings.TrimSpace(optKV[0])
 			if strings.ToLower(optK) == "expiry-time" {
@@ -94,7 +94,7 @@ func IsKeyExpired(options []string) bool {
 
 func IsClientRejected(clientIP string, options []string) bool {
 	for _, option := range options {
-		optKV := strings.Split(option, "=")
+		optKV := strings.SplitN(option, "=", 2)
 		if len(optKV) == 2 {
 			optK := strings.TrimSpace(optKV[0])
 			if strings.ToLower(optK) == "from" {
@@ -182,7 +182,7 @@ func GetHomeCollectionPath(config *commons.Config, options []string) string {
 	userHome := fmt.Sprintf("/%s/home/%s", config.IRODSZone, config.SFTPGoAuthdUsername)
 
 	for _, option := range options {
-		optKV := strings.Split(option, "=")
+		optKV := strings.SplitN(option, "=", 2)
 		if len(optKV) == 2 {
 			optK := strings.TrimSpace(optKV[0])
 			if strings.ToLower(optK) == "home" {
