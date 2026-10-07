@@ -68,20 +68,30 @@ func makeIRODSAccount(config *commons.Config) (*irodsclient_types.IRODSAccount, 
 
 		if require == irodsclient_types.CSNegotiationPolicyRequestSSL || len(config.IRODSSSLCACertificatePath) > 0 {
 			// SSL
-			sslConf := irodsclient_types.IRODSSSLConfig{
-				CACertificatePath:       config.IRODSSSLCACertificatePath,
-				EncryptionKeySize:       config.IRODSSSLKeySize,
-				EncryptionAlgorithm:     config.IRODSSSLAlgorithm,
-				EncryptionSaltSize:      config.IRODSSSLSaltSize,
-				EncryptionNumHashRounds: config.IRODSSSLHashRounds,
-				VerifyServer:            irodsclient_types.SSLVerifyServerNone,
-			}
-
-			irodsAccount.SetSSLConfiguration(&sslConf)
+			irodsAccount.SetSSLConfiguration(makeIRODSSSLConfig(config))
 		}
 	}
 
 	return irodsAccount, nil
+}
+
+func makeIRODSSSLConfig(config *commons.Config) *irodsclient_types.IRODSSSLConfig {
+	verifyServer := irodsclient_types.SSLVerifyServer(config.IRODSSSLVerifyServer)
+	if verifyServer == irodsclient_types.SSLVerifyServerCert {
+		// go-irodsclient only verifies the server for 'hostname', so 'cert' silently
+		// leaves the certificate unverified
+		log.Warnf("iRODS SSL verify server %q does not verify the server certificate, use %q instead",
+			irodsclient_types.SSLVerifyServerCert, irodsclient_types.SSLVerifyServerHostname)
+	}
+
+	return &irodsclient_types.IRODSSSLConfig{
+		CACertificatePath:       config.IRODSSSLCACertificatePath,
+		EncryptionKeySize:       config.IRODSSSLKeySize,
+		EncryptionAlgorithm:     config.IRODSSSLAlgorithm,
+		EncryptionSaltSize:      config.IRODSSSLSaltSize,
+		EncryptionNumHashRounds: config.IRODSSSLHashRounds,
+		VerifyServer:            verifyServer,
+	}
 }
 
 func makeIRODSConnectionConfig() *irodsclient_conn.IRODSConnectionConfig {
@@ -120,16 +130,7 @@ func makeIRODSAccountForProxy(config *commons.Config) (*irodsclient_types.IRODSA
 
 		if require == irodsclient_types.CSNegotiationPolicyRequestSSL || len(config.IRODSSSLCACertificatePath) > 0 {
 			// SSL
-			sslConf := irodsclient_types.IRODSSSLConfig{
-				CACertificatePath:       config.IRODSSSLCACertificatePath,
-				EncryptionKeySize:       config.IRODSSSLKeySize,
-				EncryptionAlgorithm:     config.IRODSSSLAlgorithm,
-				EncryptionSaltSize:      config.IRODSSSLSaltSize,
-				EncryptionNumHashRounds: config.IRODSSSLHashRounds,
-				VerifyServer:            irodsclient_types.SSLVerifyServerNone,
-			}
-
-			irodsAccount.SetSSLConfiguration(&sslConf)
+			irodsAccount.SetSSLConfiguration(makeIRODSSSLConfig(config))
 		}
 	}
 

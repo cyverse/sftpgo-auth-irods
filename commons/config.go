@@ -19,6 +19,13 @@ const (
 	csNegotiationPolicyRefuse   string = "CS_NEG_REFUSE"
 	csNegotiationPolicyRequire  string = "CS_NEG_REQUIRE"
 	csNegotiationPolicyDontCare string = "CS_NEG_DONT_CARE"
+
+	// server certificate verification modes accepted by go-irodsclient.
+	// Note that go-irodsclient only verifies the server for 'hostname';
+	// 'cert' behaves like 'none'.
+	SSLVerifyServerNone     string = "none"
+	SSLVerifyServerCert     string = "cert"
+	SSLVerifyServerHostname string = "hostname"
 )
 
 // Config is a configuration struct
@@ -43,6 +50,9 @@ type Config struct {
 	IRODSSSLKeySize           int    `envconfig:"IRODS_SSL_KEY_SIZE"`
 	IRODSSSLSaltSize          int    `envconfig:"IRODS_SSL_SALT_SIZE"`
 	IRODSSSLHashRounds        int    `envconfig:"IRODS_SSL_HASH_ROUNDS"`
+	// IRODSSSLVerifyServer should be one of ['none','cert','hostname'].
+	// Defaults to 'none', which does not verify the iRODS server certificate.
+	IRODSSSLVerifyServer string `envconfig:"IRODS_SSL_VERIFY_SERVER"`
 
 	// for fs mount
 	IRODSShared   string `envconfig:"IRODS_SHARED"`
@@ -87,6 +97,11 @@ func ReadFromEnv() (*Config, error) {
 		config.IRODSCSNegotiationPolicy = csNegotiationPolicyDontCare
 	}
 
+	config.IRODSSSLVerifyServer = strings.ToLower(strings.TrimSpace(config.IRODSSSLVerifyServer))
+	if len(config.IRODSSSLVerifyServer) == 0 {
+		config.IRODSSSLVerifyServer = SSLVerifyServerNone
+	}
+
 	if len(config.SFTPGoLogDir) == 0 {
 		config.SFTPGoLogDir = defaultLogDir
 	}
@@ -111,6 +126,14 @@ func (config *Config) Validate() error {
 	}
 	if len(config.IRODSAuthScheme) == 0 {
 		return errors.New("iRODS auth scheme is not given")
+	}
+	if len(config.IRODSSSLVerifyServer) > 0 {
+		switch strings.ToLower(config.IRODSSSLVerifyServer) {
+		case SSLVerifyServerNone, SSLVerifyServerCert, SSLVerifyServerHostname:
+		default:
+			return errors.Errorf("iRODS SSL verify server %q must be one of %s, %s or %s",
+				config.IRODSSSLVerifyServer, SSLVerifyServerNone, SSLVerifyServerCert, SSLVerifyServerHostname)
+		}
 	}
 	if config.IRODSRequireCSNegotiation {
 		if len(config.IRODSCSNegotiationPolicy) == 0 {
