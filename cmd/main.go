@@ -137,15 +137,12 @@ func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 			mountPaths = append(mountPaths, makeMountPathForCustomHome(config, customUserHomePath, pubKeyName))
 
 			// We don't give access to .ssh dir to not allow editting the authorized_keys file
-			//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
 
 			if config.HasSharedDir() {
 				mountPaths = append(mountPaths, makeMountPathForCustomSharedDir(config, pubKeyName))
 			}
 		} else {
 			mountPaths = append(mountPaths, makeMountPathForHome(config))
-
-			//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
 
 			if config.HasSharedDir() {
 				mountPaths = append(mountPaths, makeMountPathForSharedDir(config))
@@ -192,8 +189,6 @@ func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
 			// anonymous user doesn't have home dir
 			// so do this only if user is not anonymous
 			mountPaths = append(mountPaths, makeMountPathForHome(config))
-
-			//mountPaths = append(mountPaths, makeMountPathForSSHDir(config))
 		}
 
 		if config.HasSharedDir() {
@@ -227,16 +222,6 @@ func makeMountPathForCustomHome(config *commons.Config, customUserHomePath strin
 		DirName:        config.SFTPGoAuthdUsername,
 		Description:    fmt.Sprintf("iRODS home - %s", customUserHomePath),
 		CollectionPath: customUserHomePath,
-	}
-}
-
-func makeMountPathForSSHDir(config *commons.Config) types.MountPath {
-	userHomePath := config.GetHomeDirPath()
-	return types.MountPath{
-		Name:           fmt.Sprintf("%s_ssh", config.SFTPGoAuthdUsername),
-		DirName:        ".ssh",
-		Description:    "iRODS .ssh dir",
-		CollectionPath: fmt.Sprintf("%s/.ssh", userHomePath),
 	}
 }
 
