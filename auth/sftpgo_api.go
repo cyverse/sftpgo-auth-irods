@@ -6,16 +6,24 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/cyverse/sftpgo-auth-irods/commons"
 	"github.com/cyverse/sftpgo-auth-irods/types"
 )
 
+const (
+	apiRequestTimeout time.Duration = 30 * time.Second
+)
+
 // EnsureVirtualFolders ensures all virtual folders exist in SFTPGo.
 // For each folder, it checks via GET /api/v2/folders/{name}; if not found, creates it via POST.
 func EnsureVirtualFolders(config *commons.Config, vfolders []types.SFTPGoVirtualFolder) error {
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: apiRequestTimeout,
+	}
 
 	for i := range vfolders {
 		if err := ensureFolder(client, config, &vfolders[i]); err != nil {
@@ -26,9 +34,10 @@ func EnsureVirtualFolders(config *commons.Config, vfolders []types.SFTPGoVirtual
 }
 
 func ensureFolder(client *http.Client, config *commons.Config, vfolder *types.SFTPGoVirtualFolder) error {
-	url := fmt.Sprintf("%s/api/v2/folders/%s", config.SFTPGoAPIBaseURL, vfolder.Name)
+	// the folder name is a path segment, so it must be escaped
+	requestURL := fmt.Sprintf("%s/api/v2/folders/%s", config.SFTPGoAPIBaseURL, url.PathEscape(vfolder.Name))
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to build GET request for folder %q", vfolder.Name)
 	}
@@ -64,8 +73,8 @@ func createFolder(client *http.Client, config *commons.Config, vfolder *types.SF
 		return errors.Wrapf(err, "failed to marshal folder %q", vfolder.Name)
 	}
 
-	url := fmt.Sprintf("%s/api/v2/folders", config.SFTPGoAPIBaseURL)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	requestURL := fmt.Sprintf("%s/api/v2/folders", config.SFTPGoAPIBaseURL)
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(body))
 	if err != nil {
 		return errors.Wrapf(err, "failed to build POST request for folder %q", vfolder.Name)
 	}
