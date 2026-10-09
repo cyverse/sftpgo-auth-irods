@@ -9,8 +9,8 @@ github.com/cockroachdb/redact v1.1.5/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZ
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/cyverse/go-irodsclient v0.20.0 h1:bJuUU6uxs9XholeZE3Uc2kQQ/IHaynJ6JVnKSYFdLFc=
 github.com/cyverse/go-irodsclient v0.20.0/go.mod h1:ZtRO86ZbVkoz8morTMs4qWd4PrjvlrLR3/N/m1sSW50=
-github.com/cyverse/sftpgo-sdk v0.1.10-0.20260615211904-860a92bd5cb9 h1:+wf1DiVoE99HUuT35N+uQIF8ODyHCbf0RXs5Nr7QvrU=
-github.com/cyverse/sftpgo-sdk v0.1.10-0.20260615211904-860a92bd5cb9/go.mod h1:ehimvlTP+XTEiE3t1CPwWx9n7+6A6OGvMGlZ7ouvKFk=
+github.com/cyverse/sftpgo-sdk v0.1.10-0.20261009173736-277c356708c8 h1:oeySYr19Dbs/QtTA/0H/VJ9PLPJmakJTmCl2PxWx6QY=
+github.com/cyverse/sftpgo-sdk v0.1.10-0.20261009173736-277c356708c8/go.mod h1:ehimvlTP+XTEiE3t1CPwWx9n7+6A6OGvMGlZ7ouvKFk=
 github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 h1:y5HC9v93H5EPKqaS1UYVg1uYah5Xf51mBfIoWehClUQ=
 github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964/go.mod h1:Xd9hchkHSWYkEqJwUGisez3G1QY8Ryz0sdWrLPMGjLk=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

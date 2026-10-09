@@ -80,6 +80,7 @@ func makeFileSystem(config *commons.Config, collectionPath string) *types.SFTPGo
 			SSLAlgorithm:                   config.IRODSSSLAlgorithm,
 			SSLSaltSize:                    config.IRODSSSLSaltSize,
 			SSLHashRounds:                  config.IRODSSSLHashRounds,
+			PoolEndpoint:                   config.IRODSPoolEndpoint,
 		},
 	}
 }

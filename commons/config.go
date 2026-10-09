@@ -45,6 +45,10 @@ type Config struct {
 	// IRODSCSNegotiationPolicy should be one of ['CS_NEG_REFUSE','CS_NEG_REQUIRE','CS_NEG_DONT_CARE']
 	IRODSCSNegotiationPolicy string `envconfig:"IRODS_CS_NEGOTIATION_POLICY"`
 
+	// for irodsfs-pool
+	// IRODSPoolEndpoint is an optional irodsfs-pool service endpoint, e.g. "tcp://host:port", "unix:///path/to/socket" or "host:port"
+	IRODSPoolEndpoint string `envconfig:"IRODS_POOL_ENDPOINT"`
+
 	// for SSL/PAM auth
 	IRODSSSLCACertificatePath string `envconfig:"IRODS_SSL_CA_CERT_PATH"`
 	IRODSSSLAlgorithm         string `envconfig:"IRODS_SSL_ALGORITHM"`

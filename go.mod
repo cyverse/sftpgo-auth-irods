@@ -35,4 +35,4 @@ require (
 	golang.org/x/text v0.37.0 // indirect
 )
 
-replace github.com/sftpgo/sdk => github.com/cyverse/sftpgo-sdk v0.1.10-0.20260615211904-860a92bd5cb9
+replace github.com/sftpgo/sdk => github.com/cyverse/sftpgo-sdk v0.1.10-0.20261009173736-277c356708c8

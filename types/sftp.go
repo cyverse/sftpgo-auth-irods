@@ -43,6 +43,7 @@ type SFTPGoIRODSFsConfig struct {
 	SSLAlgorithm                   string        `json:"ssl_algorithm,omitempty"`
 	SSLSaltSize                    int           `json:"ssl_salt_size,omitempty"`
 	SSLHashRounds                  int           `json:"ssl_hash_rounds,omitempty"`
+	PoolEndpoint                   string        `json:"pool_endpoint,omitempty"`
 }
 
 // GetRedacted returns a redacted SFTPGoIRODSFsConfig, or nil for a nil config
