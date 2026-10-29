@@ -4,7 +4,7 @@ go 1.25.8
 
 require (
 	github.com/cockroachdb/errors v1.12.0
-	github.com/cyverse/go-irodsclient v0.20.0
+	github.com/cyverse/go-irodsclient v0.21.6
 	github.com/gliderlabs/ssh v0.3.3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/sftpgo/sdk v0.1.9
