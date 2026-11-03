@@ -100,7 +100,20 @@ var (
 	createSshDir     = auth.CreateSshDir
 )
 
+// checkDeniedUser rejects a user listed in SFTPGO_DENIED_USERS before any
+// iRODS call is made.
+func checkDeniedUser(config *commons.Config) error {
+	if config.IsDeniedUser() {
+		return errors.Errorf("user %q is denied by configuration", config.SFTPGoAuthdUsername)
+	}
+	return nil
+}
+
 func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
+	if err := checkDeniedUser(config); err != nil {
+		return nil, err
+	}
+
 	err := config.ValidateForPublicKeyAuth()
 	if err != nil {
 		return nil, err
@@ -161,6 +174,10 @@ func authPublicKey(config *commons.Config) (*types.SFTPGoUser, error) {
 }
 
 func authPassword(config *commons.Config) (*types.SFTPGoUser, error) {
+	if err := checkDeniedUser(config); err != nil {
+		return nil, err
+	}
+
 	if config.IsAnonymousUser() {
 		// overwrite existing account info to ensure correct spell/case and empty password
 		config.SFTPGoAuthdUsername = "anonymous"

@@ -147,6 +147,16 @@ SFTPGo shows the key only once, when it is created, and stores only a hash
 afterwards, so it cannot be read back later — create a new one if it is lost.
 The key is sent in the `X-SFTPGO-API-KEY` header.
 
+### Denied users
+
+| Variable | Required | Default | Notes |
+| --- | --- | --- | --- |
+| `SFTPGO_DENIED_USERS` | | | Comma-separated user names to reject, e.g. `root,rods` |
+
+A listed user is rejected before any iRODS call, for both password and public
+key logins. Names are compared case-insensitively, and spaces around each name
+are ignored.
+
 ### Logging
 
 | Variable | Required | Default | Notes |

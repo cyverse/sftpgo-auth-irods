@@ -79,6 +79,7 @@ var configEnvKeys = []string{
 	"SFTPGO_AUTHD_PUBLIC_KEY",
 	"SFTPGO_AUTHD_IP",
 	"SFTPGO_AUTH_CACHE_TIME",
+	"SFTPGO_DENIED_USERS",
 	"SFTPGO_LOG_DIR",
 	"SFTPGO_API_BASE_URL",
 	"SFTPGO_API_KEY",
@@ -775,6 +776,67 @@ func TestRedactedJSONHidesPassword(t *testing.T) {
 	}
 	if !strings.Contains(string(response), "super-secret") {
 		t.Error("the response to SFTPGo lost the password")
+	}
+}
+
+// TestDeniedUsers checks that a user listed in SFTPGO_DENIED_USERS is rejected
+// without any iRODS call, whatever the case or spacing, and that users not on
+// the list are unaffected.
+func TestDeniedUsers(t *testing.T) {
+	const deniedUsers = " root , rods,,"
+
+	tests := []struct {
+		name      string
+		username  string
+		publicKey bool
+		wantDeny  bool
+	}{
+		{name: "listed user with password", username: "root", wantDeny: true},
+		{name: "listed user with public key", username: "root", publicKey: true, wantDeny: true},
+		{name: "listed user in other case", username: "ROOT", wantDeny: true},
+		{name: "second listed user", username: "rods", wantDeny: true},
+		{name: "user not listed", username: testUsername, wantDeny: false},
+		{name: "user whose name contains a listed name", username: "rootless", wantDeny: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := baseEnv()
+			env["SFTPGO_AUTHD_USERNAME"] = tt.username
+			env["SFTPGO_DENIED_USERS"] = deniedUsers
+			if tt.publicKey {
+				env["SFTPGO_AUTHD_PUBLIC_KEY"] = testPublicKey
+				env["IRODS_PROXY_USER"] = testProxyUsername
+				env["IRODS_PROXY_PASSWORD"] = testProxyPassword
+			} else {
+				env["SFTPGO_AUTHD_PASSWORD"] = testUserPassword
+			}
+
+			config := readConfig(t, env)
+
+			if tt.wantDeny {
+				// leave the panicking stubs from TestMain in place, so any
+				// iRODS call fails the test
+				var err error
+				if tt.publicKey {
+					_, err = authPublicKey(config)
+				} else {
+					_, err = authPassword(config)
+				}
+				if err == nil {
+					t.Fatal("authentication succeeded for a denied user, want an error")
+				}
+				if !strings.Contains(err.Error(), "denied") {
+					t.Errorf("error = %q, want it to mention the denial", err)
+				}
+				return
+			}
+
+			stubAuth(t, true, nil, nil)
+			if _, err := authPassword(config); err != nil {
+				t.Fatalf("authPassword() failed for a user not on the list: %v", err)
+			}
+		})
 	}
 }
 

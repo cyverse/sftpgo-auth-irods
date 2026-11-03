@@ -75,6 +75,11 @@ type Config struct {
 	// working for up to this long, so the default is deliberately short.
 	SFTPGoAuthCacheTime int64 `envconfig:"SFTPGO_AUTH_CACHE_TIME"`
 
+	// SFTPGoDeniedUsers is a comma-separated list of user names that are
+	// rejected without contacting iRODS, e.g. "root,rods". Names are compared
+	// case-insensitively.
+	SFTPGoDeniedUsers string `envconfig:"SFTPGO_DENIED_USERS"`
+
 	// for Logging
 	SFTPGoLogDir string `envconfig:"SFTPGO_LOG_DIR"`
 
@@ -256,6 +261,30 @@ func (config *Config) IsPublicKeyAuth() bool {
 // IsAnonymousUser checks if the user is anonymous
 func (config *Config) IsAnonymousUser() bool {
 	return strings.ToLower(config.SFTPGoAuthdUsername) == "anonymous"
+}
+
+// GetDeniedUsers returns the user names listed in SFTPGO_DENIED_USERS, with
+// surrounding spaces trimmed and empty entries dropped.
+func (config *Config) GetDeniedUsers() []string {
+	deniedUsers := []string{}
+	for _, name := range strings.Split(config.SFTPGoDeniedUsers, ",") {
+		name = strings.TrimSpace(name)
+		if len(name) > 0 {
+			deniedUsers = append(deniedUsers, name)
+		}
+	}
+	return deniedUsers
+}
+
+// IsDeniedUser checks if the user is listed in SFTPGO_DENIED_USERS
+func (config *Config) IsDeniedUser() bool {
+	username := strings.TrimSpace(config.SFTPGoAuthdUsername)
+	for _, name := range config.GetDeniedUsers() {
+		if strings.EqualFold(name, username) {
+			return true
+		}
+	}
+	return false
 }
 
 // IsProxyAuth checks if it uses proxy auth
