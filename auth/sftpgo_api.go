@@ -18,8 +18,12 @@ const (
 	apiRequestTimeout time.Duration = 30 * time.Second
 )
 
-// EnsureVirtualFolders ensures all virtual folders exist in SFTPGo.
-// For each folder, it checks via GET /api/v2/folders/{name}; if not found, creates it via POST.
+// EnsureVirtualFolders ensures all virtual folders exist in SFTPGo with the
+// current configuration. For each folder, it updates the folder via
+// PUT /api/v2/folders/{name}; if the folder is not found, creates it via POST.
+// An existing folder is always updated, because its filesystem config (the
+// iRODS password, endpoint, collection path, ...) may have changed since it
+// was created, and SFTPGo mounts what is stored, not what the hook returns.
 func EnsureVirtualFolders(config *commons.Config, vfolders []types.SFTPGoVirtualFolder) error {
 	client := &http.Client{
 		Timeout: apiRequestTimeout,
@@ -34,34 +38,28 @@ func EnsureVirtualFolders(config *commons.Config, vfolders []types.SFTPGoVirtual
 }
 
 func ensureFolder(client *http.Client, config *commons.Config, vfolder *types.SFTPGoVirtualFolder) error {
-	// the folder name is a path segment, so it must be escaped
-	requestURL := fmt.Sprintf("%s/api/v2/folders/%s", config.SFTPGoAPIBaseURL, url.PathEscape(vfolder.Name))
-
-	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	body, err := makeFolderBody(vfolder)
 	if err != nil {
-		return errors.Wrapf(err, "failed to build GET request for folder %q", vfolder.Name)
+		return err
 	}
-	req.Header.Set("X-SFTPGO-API-KEY", config.SFTPGoAPIKey)
 
-	resp, err := client.Do(req)
+	status, errBody, err := updateFolder(client, config, vfolder.Name, body)
 	if err != nil {
-		return errors.Wrapf(err, "GET /api/v2/folders/%s failed", vfolder.Name)
+		return err
 	}
-	resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
-		// folder already exists
+	switch status {
+	case http.StatusOK:
+		// folder already exists and is updated
 		return nil
+	case http.StatusNotFound:
+		return createFolder(client, config, vfolder.Name, body)
+	default:
+		return errors.Errorf("failed to update folder %q: status %d, body: %s", vfolder.Name, status, errBody)
 	}
-
-	if resp.StatusCode != http.StatusNotFound {
-		return errors.Errorf("unexpected status %d when checking folder %q", resp.StatusCode, vfolder.Name)
-	}
-
-	return createFolder(client, config, vfolder)
 }
 
-func createFolder(client *http.Client, config *commons.Config, vfolder *types.SFTPGoVirtualFolder) error {
+func makeFolderBody(vfolder *types.SFTPGoVirtualFolder) ([]byte, error) {
 	folder := types.SFTPGoFolder{
 		Name:        vfolder.Name,
 		Description: vfolder.Description,
@@ -70,26 +68,52 @@ func createFolder(client *http.Client, config *commons.Config, vfolder *types.SF
 
 	body, err := json.Marshal(folder)
 	if err != nil {
-		return errors.Wrapf(err, "failed to marshal folder %q", vfolder.Name)
+		return nil, errors.Wrapf(err, "failed to marshal folder %q", vfolder.Name)
 	}
+	return body, nil
+}
 
-	requestURL := fmt.Sprintf("%s/api/v2/folders", config.SFTPGoAPIBaseURL)
-	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(body))
+// updateFolder sends PUT /api/v2/folders/{name} and returns the status code
+// and the response body.
+func updateFolder(client *http.Client, config *commons.Config, name string, body []byte) (int, []byte, error) {
+	// the folder name is a path segment, so it must be escaped
+	requestURL := fmt.Sprintf("%s/api/v2/folders/%s", config.SFTPGoAPIBaseURL, url.PathEscape(name))
+
+	req, err := http.NewRequest(http.MethodPut, requestURL, bytes.NewReader(body))
 	if err != nil {
-		return errors.Wrapf(err, "failed to build POST request for folder %q", vfolder.Name)
+		return 0, nil, errors.Wrapf(err, "failed to build PUT request for folder %q", name)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-SFTPGO-API-KEY", config.SFTPGoAPIKey)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errors.Wrapf(err, "POST /api/v2/folders failed for folder %q", vfolder.Name)
+		return 0, nil, errors.Wrapf(err, "PUT /api/v2/folders/%s failed", name)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, respBody, nil
+}
+
+func createFolder(client *http.Client, config *commons.Config, name string, body []byte) error {
+	requestURL := fmt.Sprintf("%s/api/v2/folders", config.SFTPGoAPIBaseURL)
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewReader(body))
+	if err != nil {
+		return errors.Wrapf(err, "failed to build POST request for folder %q", name)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-SFTPGO-API-KEY", config.SFTPGoAPIKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "POST /api/v2/folders failed for folder %q", name)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
 		errBody, _ := io.ReadAll(resp.Body)
-		return errors.Errorf("failed to create folder %q: status %d, body: %s", vfolder.Name, resp.StatusCode, errBody)
+		return errors.Errorf("failed to create folder %q: status %d, body: %s", name, resp.StatusCode, errBody)
 	}
 
 	return nil

@@ -779,17 +779,17 @@ func TestRedactedJSONHidesPassword(t *testing.T) {
 }
 
 // TestEnsureVirtualFoldersViaAPI checks that the folders are created through the
-// SFTPGo REST API when it is configured.
+// SFTPGo REST API when they do not exist yet.
 func TestEnsureVirtualFoldersViaAPI(t *testing.T) {
-	var gets, posts []string
+	var puts, posts []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-SFTPGO-API-KEY") != "test-key" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		if r.Method == http.MethodGet {
-			gets = append(gets, r.URL.Path)
+		if r.Method == http.MethodPut {
+			puts = append(puts, r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -817,16 +817,76 @@ func TestEnsureVirtualFoldersViaAPI(t *testing.T) {
 		t.Fatalf("authPassword() failed: %v", err)
 	}
 
-	wantGets := []string{"/api/v2/folders/" + testUsername + "_home", "/api/v2/folders/" + testUsername + "_shared"}
-	sort.Strings(gets)
-	if !equalStrings(gets, wantGets) {
-		t.Errorf("looked up %v, want %v", gets, wantGets)
+	wantPuts := []string{"/api/v2/folders/" + testUsername + "_home", "/api/v2/folders/" + testUsername + "_shared"}
+	sort.Strings(puts)
+	if !equalStrings(puts, wantPuts) {
+		t.Errorf("updated %v, want %v", puts, wantPuts)
 	}
 
 	wantPosts := []string{testUsername + "_home", testUsername + "_shared"}
 	sort.Strings(posts)
 	if !equalStrings(posts, wantPosts) {
 		t.Errorf("created %v, want %v", posts, wantPosts)
+	}
+}
+
+// TestEnsureVirtualFoldersUpdatesExisting checks that folders which already
+// exist in SFTPGo are updated with the current filesystem config, such as a
+// changed password, instead of being left as they were first created.
+func TestEnsureVirtualFoldersUpdatesExisting(t *testing.T) {
+	updated := map[string]types.SFTPGoFolder{}
+	var posts []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-SFTPGO-API-KEY") != "test-key" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		var folder types.SFTPGoFolder
+		if err := json.NewDecoder(r.Body).Decode(&folder); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if r.Method == http.MethodPut {
+			updated[r.URL.Path] = folder
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		posts = append(posts, folder.Name)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+
+	env := baseEnv()
+	env["SFTPGO_AUTHD_PASSWORD"] = "new-password"
+	env["SFTPGO_API_BASE_URL"] = server.URL
+	env["SFTPGO_API_KEY"] = "test-key"
+
+	config := readConfig(t, env)
+	stubAuth(t, true, nil, nil)
+
+	if _, err := authPassword(config); err != nil {
+		t.Fatalf("authPassword() failed: %v", err)
+	}
+
+	if len(posts) != 0 {
+		t.Errorf("created %v, want no folder created", posts)
+	}
+
+	home, ok := updated["/api/v2/folders/"+testUsername+"_home"]
+	if !ok {
+		t.Fatalf("home folder was not updated, updated %v", updated)
+	}
+	if home.Name != testUsername+"_home" {
+		t.Errorf("updated folder name = %q, want %q", home.Name, testUsername+"_home")
+	}
+	if home.FileSystem == nil || home.FileSystem.IRODSConfig == nil {
+		t.Fatal("updated folder has no iRODS filesystem")
+	}
+	if got := home.FileSystem.IRODSConfig.Password.Payload; got != "new-password" {
+		t.Errorf("updated password = %q, want %q", got, "new-password")
 	}
 }
 

@@ -128,7 +128,9 @@ entry expires, so keep it short.
 | `SFTPGO_API_KEY` | | | An API key created in that admin UI |
 
 When both are set, each virtual folder is created through SFTPGo's REST API
-before the response is returned. They have to be set together.
+before the response is returned, or updated if it already exists, so a changed
+password or iRODS setting reaches the stored folder. They have to be set
+together.
 
 `SFTPGO_API_BASE_URL` points back at the SFTPGo instance this hook is
 authenticating for. The REST API is served by the same `httpd` binding as the
@@ -279,7 +281,7 @@ Under Docker, restart the container instead — in `sftpgo-deploy` that is
 of the above for you.
 
 To confirm it worked, log in once and look for the folders in the admin UI, or
-check the hook's log for a `POST /api/v2/folders` failure.
+check the hook's log for a `PUT` or `POST /api/v2/folders` failure.
 
 ## Building
 
